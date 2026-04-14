@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Scissors, Briefcase, User, ChevronRight, ArrowLeft } from 'lucide-react';
+import { setSessionRole } from '../components/layout/AppLayout';
 
 // ── Barbeiros de teste ────────────────────────────────────────────────────────
 const TEST_BARBERS = [
@@ -34,35 +35,29 @@ const TEST_BARBERS = [
   },
 ];
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.1 } },
-};
-const cardVariants = {
-  hidden: { opacity: 0, y: 24 },
-  show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 280, damping: 22 } },
-};
-
 export default function RoleSelector() {
   const navigate = useNavigate();
-  const [phase, setPhase] = useState('role'); // 'role' | 'barber'
+  const [phase, setPhase] = useState('role');
   const [selectedRole, setSelectedRole] = useState(null);
-  const [selectedBarber, setSelectedBarber] = useState(null);
+  const [selectedBarberId, setSelectedBarberId] = useState(null);
 
   const handleRoleClick = (roleId) => {
     setSelectedRole(roleId);
     if (roleId === 'barber') {
-      setTimeout(() => setPhase('barber'), 220);
+      setTimeout(() => setPhase('barber'), 200);
     } else if (roleId === 'client') {
-      setTimeout(() => navigate('/booking'), 220);
+      setTimeout(() => navigate('/booking'), 200);
     } else if (roleId === 'admin') {
-      setTimeout(() => navigate('/admin'), 220);
+      setSessionRole({ role: 'admin' });
+      setTimeout(() => navigate('/admin'), 200);
     }
   };
 
   const handleBarberSelect = (barber) => {
-    setSelectedBarber(barber.id);
-    setTimeout(() => navigate(`/barber/${barber.id}`), 220);
+    setSelectedBarberId(barber.id);
+    // Gravar sessão como barbeiro
+    setSessionRole({ role: 'barber', barberId: barber.id, barberName: barber.name });
+    setTimeout(() => navigate(`/barber/${barber.id}`), 200);
   };
 
   return (
@@ -72,7 +67,7 @@ export default function RoleSelector() {
       <motion.div
         initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45 }}
+        transition={{ duration: 0.4 }}
         className="mb-10 text-center"
       >
         <div className="flex items-center justify-center gap-3 mb-1">
@@ -88,29 +83,21 @@ export default function RoleSelector() {
 
       <AnimatePresence mode="wait">
 
-        {/* ── FASE: escolha de perfil ── */}
+        {/* ── Seleção de perfil ── */}
         {phase === 'role' && (
-          <motion.div
-            key="role"
-            variants={containerVariants}
-            initial="hidden"
-            animate="show"
-            exit={{ opacity: 0, x: -20 }}
+          <motion.div key="role"
+            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -20 }}
             className="w-full max-w-xs space-y-3"
           >
-            <motion.p variants={cardVariants} className="text-zinc-500 text-sm text-center mb-5">
-              Quem és tu?
-            </motion.p>
+            <p className="text-zinc-500 text-sm text-center mb-5">Quem és tu?</p>
 
             {/* Cliente */}
             <motion.button
-              variants={cardVariants}
-              onClick={() => handleRoleClick('client')}
-              whileTap={{ scale: 0.97 }}
+              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+              onClick={() => handleRoleClick('client')} whileTap={{ scale: 0.97 }}
               className={`w-full text-left rounded-2xl border p-4 flex items-center gap-4
                 bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700 hover:border-zinc-500
-                transition-all duration-200 outline-none
-                ${selectedRole === 'client' ? 'ring-2 ring-[#C9A84C]' : ''}`}
+                transition-all duration-200 ${selectedRole === 'client' ? 'ring-2 ring-[#C9A84C]' : ''}`}
             >
               <div className="w-11 h-11 rounded-xl bg-black/40 border border-white/5 flex items-center justify-center flex-shrink-0">
                 <User className="w-5 h-5 text-[#C9A84C]" />
@@ -124,33 +111,29 @@ export default function RoleSelector() {
 
             {/* Barbeiro */}
             <motion.button
-              variants={cardVariants}
-              onClick={() => handleRoleClick('barber')}
-              whileTap={{ scale: 0.97 }}
+              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+              onClick={() => handleRoleClick('barber')} whileTap={{ scale: 0.97 }}
               className={`w-full text-left rounded-2xl border p-4 flex items-center gap-4
                 bg-gradient-to-br from-amber-950/50 to-zinc-900 border-amber-800/40 hover:border-amber-600/60
-                transition-all duration-200 outline-none
-                ${selectedRole === 'barber' ? 'ring-2 ring-[#C9A84C]' : ''}`}
+                transition-all duration-200 ${selectedRole === 'barber' ? 'ring-2 ring-[#C9A84C]' : ''}`}
             >
               <div className="w-11 h-11 rounded-xl bg-black/40 border border-white/5 flex items-center justify-center flex-shrink-0">
                 <Scissors className="w-5 h-5 text-[#C9A84C]" />
               </div>
               <div className="flex-1">
                 <p className="font-bold text-white text-sm">Barbeiro</p>
-                <p className="text-zinc-400 text-xs mt-0.5">Ver agenda e comissões</p>
+                <p className="text-zinc-400 text-xs mt-0.5">Agenda, comissões e stats</p>
               </div>
               <ChevronRight className="w-4 h-4 text-zinc-600" />
             </motion.button>
 
             {/* Admin */}
             <motion.button
-              variants={cardVariants}
-              onClick={() => handleRoleClick('admin')}
-              whileTap={{ scale: 0.97 }}
+              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+              onClick={() => handleRoleClick('admin')} whileTap={{ scale: 0.97 }}
               className={`w-full text-left rounded-2xl border p-4 flex items-center gap-4
                 bg-gradient-to-br from-yellow-950/30 to-zinc-900 border-yellow-800/30 hover:border-yellow-600/50
-                transition-all duration-200 outline-none
-                ${selectedRole === 'admin' ? 'ring-2 ring-[#C9A84C]' : ''}`}
+                transition-all duration-200 ${selectedRole === 'admin' ? 'ring-2 ring-[#C9A84C]' : ''}`}
             >
               <div className="w-11 h-11 rounded-xl bg-black/40 border border-white/5 flex items-center justify-center flex-shrink-0">
                 <Briefcase className="w-5 h-5 text-[#C9A84C]" />
@@ -158,62 +141,43 @@ export default function RoleSelector() {
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <p className="font-bold text-white text-sm">Administrador</p>
-                  <span className="text-[9px] font-bold text-[#C9A84C] border border-[#C9A84C]/40 rounded-full px-1.5 py-0.5 bg-[#C9A84C]/10">
-                    RESTRITO
-                  </span>
+                  <span className="text-[9px] font-bold text-[#C9A84C] border border-[#C9A84C]/40 rounded-full px-1.5 py-0.5 bg-[#C9A84C]/10">RESTRITO</span>
                 </div>
                 <p className="text-zinc-400 text-xs mt-0.5">Gestão completa da rede</p>
               </div>
               <ChevronRight className="w-4 h-4 text-zinc-600" />
             </motion.button>
 
-            <motion.p
-              variants={cardVariants}
-              className="text-zinc-700 text-[11px] text-center pt-4"
-            >
-              Em produção: acesso controlado por email
-            </motion.p>
+            <p className="text-zinc-700 text-[11px] text-center pt-3">Em produção: acesso controlado por email</p>
           </motion.div>
         )}
 
-        {/* ── FASE: escolha de barbeiro ── */}
+        {/* ── Seleção de barbeiro ── */}
         {phase === 'barber' && (
-          <motion.div
-            key="barber"
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
+          <motion.div key="barber"
+            initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
             transition={{ type: 'spring', stiffness: 300, damping: 28 }}
             className="w-full max-w-xs space-y-3"
           >
             <div className="flex items-center gap-3 mb-5">
-              <button
-                onClick={() => { setPhase('role'); setSelectedRole(null); }}
-                className="w-8 h-8 rounded-xl bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white"
+              <button onClick={() => { setPhase('role'); setSelectedRole(null); }}
+                className="w-8 h-8 rounded-xl bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />
               </button>
-              <p className="text-zinc-400 text-sm">Seleciona o teu perfil</p>
+              <p className="text-zinc-400 text-sm font-medium">Qual é o teu perfil?</p>
             </div>
 
             {TEST_BARBERS.map((barber, i) => (
-              <motion.button
-                key={barber.id}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.08 }}
-                onClick={() => handleBarberSelect(barber)}
-                whileTap={{ scale: 0.97 }}
+              <motion.button key={barber.id}
+                initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
+                onClick={() => handleBarberSelect(barber)} whileTap={{ scale: 0.97 }}
                 className={`w-full text-left rounded-2xl border p-4 flex items-center gap-4
                   bg-gradient-to-br from-zinc-800/80 to-zinc-900 border-zinc-700 hover:border-[#C9A84C]/50
-                  transition-all duration-200 outline-none
-                  ${selectedBarber === barber.id ? 'ring-2 ring-[#C9A84C] border-[#C9A84C]/50' : ''}`}
+                  transition-all duration-200
+                  ${selectedBarberId === barber.id ? 'ring-2 ring-[#C9A84C] border-[#C9A84C]/50' : ''}`}
               >
-                <img
-                  src={barber.photo}
-                  alt={barber.name}
-                  className="w-12 h-12 rounded-xl object-cover flex-shrink-0"
-                />
+                <img src={barber.photo} alt={barber.name} className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-white text-sm">{barber.name}</p>
                   <p className="text-[#C9A84C] text-[11px] mt-0.5">{barber.shop}</p>
@@ -226,9 +190,7 @@ export default function RoleSelector() {
               </motion.button>
             ))}
 
-            <p className="text-zinc-700 text-[11px] text-center pt-2">
-              Em produção: login por email + senha
-            </p>
+            <p className="text-zinc-700 text-[11px] text-center pt-2">Em produção: login por email + senha</p>
           </motion.div>
         )}
 
