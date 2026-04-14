@@ -6,6 +6,7 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 
+import RoleSelector from './pages/RoleSelector';
 import Booking from './pages/Booking';
 import Loyalty from './pages/Loyalty';
 import BarberDashboard from './pages/BarberDashboard';
@@ -22,10 +23,10 @@ const AuthenticatedApp = () => {
 
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background">
+      <div className="fixed inset-0 flex items-center justify-center bg-[#080808]">
         <div className="text-center space-y-4">
-          <div className="w-10 h-10 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-muted-foreground">A carregar...</p>
+          <div className="w-10 h-10 border-2 border-[#C9A84C]/30 border-t-[#C9A84C] rounded-full animate-spin mx-auto" />
+          <p className="text-sm text-zinc-500">A carregar...</p>
         </div>
       </div>
     );
@@ -42,11 +43,14 @@ const AuthenticatedApp = () => {
 
   return (
     <Routes>
-      {/* Public - Client */}
-      <Route path="/" element={<Booking />} />
+      {/* Landing - seleção de perfil */}
+      <Route path="/" element={<RoleSelector />} />
+
+      {/* Área de Cliente */}
+      <Route path="/booking" element={<Booking />} />
       <Route path="/loyalty" element={<Loyalty />} />
 
-      {/* Barber & Admin - with Layout */}
+      {/* Barbeiro & Admin - com sidebar */}
       <Route element={<AppLayout />}>
         <Route path="/barber" element={<BarberDashboard />} />
         <Route path="/barber/commissions" element={<BarberDashboard />} />
@@ -63,7 +67,6 @@ const AuthenticatedApp = () => {
   );
 };
 
-
 function App() {
   return (
     <AuthProvider>
@@ -74,7 +77,7 @@ function App() {
         <Toaster />
       </QueryClientProvider>
     </AuthProvider>
-  )
+  );
 }
 
-export default App
+export default App;
