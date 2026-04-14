@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import { createContext, useContext, useState, useEffect } from 'react';
 
 import RoleSelector from './pages/RoleSelector';
 import Booking from './pages/Booking';
@@ -18,41 +19,58 @@ import AdminServices from './pages/AdminServices';
 import AdminAppointments from './pages/AdminAppointments';
 import AppLayout from './components/layout/AppLayout';
 
+// ── Theme Context ─────────────────────────────────────────────────────────────
+export const ThemeContext = createContext({ theme: 'dark', toggleTheme: () => {} });
+export function useTheme() { return useContext(ThemeContext); }
+
+function ThemeProvider({ children }) {
+  const [theme, setTheme] = useState(() => {
+    try { return localStorage.getItem('fellas_theme') || 'dark'; } catch { return 'dark'; }
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    // Remove ambas e aplica a correcta
+    root.classList.remove('light', 'dark');
+    root.classList.add(theme);
+    try { localStorage.setItem('fellas_theme', theme); } catch {}
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
+
+  return (
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-[#080808]">
+      <div className="fixed inset-0 flex items-center justify-center bg-background">
         <div className="text-center space-y-4">
-          <div className="w-10 h-10 border-2 border-[#C9A84C]/30 border-t-[#C9A84C] rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-zinc-500">A carregar...</p>
+          <div className="w-10 h-10 border-2 rounded-full animate-spin mx-auto"
+            style={{ borderColor: 'rgba(200,16,46,0.25)', borderTopColor: '#C8102E' }} />
+          <p className="text-sm text-muted-foreground">A carregar...</p>
         </div>
       </div>
     );
   }
 
   if (authError) {
-    if (authError.type === 'user_not_registered') {
-      return <UserNotRegisteredError />;
-    } else if (authError.type === 'auth_required') {
-      navigateToLogin();
-      return null;
-    }
+    if (authError.type === 'user_not_registered') return <UserNotRegisteredError />;
+    if (authError.type === 'auth_required') { navigateToLogin(); return null; }
   }
 
   return (
     <Routes>
-      {/* Landing */}
       <Route path="/" element={<RoleSelector />} />
-
-      {/* Área de Cliente */}
       <Route path="/booking" element={<Booking />} />
       <Route path="/loyalty" element={<Loyalty />} />
-
-      {/* Barbeiro & Admin - com sidebar */}
       <Route element={<AppLayout />}>
-        {/* Barbeiro por ID (modo teste) ou genérico */}
         <Route path="/barber" element={<BarberDashboard />} />
         <Route path="/barber/:barberId" element={<BarberDashboard />} />
         <Route path="/barber/commissions" element={<BarberDashboard />} />
@@ -63,7 +81,6 @@ const AuthenticatedApp = () => {
         <Route path="/admin/stock" element={<AdminStock />} />
         <Route path="/admin/cash" element={<AdminCash />} />
       </Route>
-
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
@@ -71,14 +88,16 @@ const AuthenticatedApp = () => {
 
 function App() {
   return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClientInstance}>
-        <Router>
-          <AuthenticatedApp />
-        </Router>
-        <Toaster />
-      </QueryClientProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <QueryClientProvider client={queryClientInstance}>
+          <Router>
+            <AuthenticatedApp />
+          </Router>
+          <Toaster />
+        </QueryClientProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
