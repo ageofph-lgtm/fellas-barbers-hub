@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Scissors } from 'lucide-react';
+import { ArrowLeft, Scissors, Home } from 'lucide-react';
 import ShopSelector from '../components/booking/ShopSelector';
 import ServiceSelector from '../components/booking/ServiceSelector';
 import BarberSelector from '../components/booking/BarberSelector';
@@ -13,6 +13,8 @@ import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 
 const STEPS = ['shop', 'services', 'barber', 'time', 'confirm', 'success'];
+
+const STEP_LABELS = ['Loja', 'Serviços', 'Barbeiro', 'Horário', 'Confirmação'];
 
 export default function Booking() {
   const [step, setStep] = useState(0);
@@ -29,6 +31,11 @@ export default function Booking() {
   const { data: shops = [] } = useQuery({
     queryKey: ['barbershops'],
     queryFn: () => base44.entities.Barbershop.filter({ is_active: true }),
+  });
+
+  const { data: allAppointments = [] } = useQuery({
+    queryKey: ['all-appointments-today'],
+    queryFn: () => base44.entities.Appointment.filter({ date: format(new Date(), 'yyyy-MM-dd') }),
   });
 
   const { data: services = [] } = useQuery({
@@ -111,27 +118,46 @@ export default function Booking() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-lg border-b border-border">
-        <div className="max-w-lg mx-auto px-4 py-4 flex items-center gap-3">
-          {step > 0 && step < 5 && (
-            <button onClick={goBack} className="p-2 -ml-2 text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="w-5 h-5" />
+      <div className="sticky top-0 z-40 bg-[#080808]/95 backdrop-blur-lg border-b border-border">
+        <div className="max-w-lg mx-auto px-4 pt-4 pb-2 flex items-center gap-3">
+          {step > 0 && step < 5 ? (
+            <button
+              onClick={goBack}
+              className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground flex-shrink-0"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate('/')}
+              className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground flex-shrink-0"
+            >
+              <Home className="w-4 h-4" />
             </button>
           )}
-          <div className="flex items-center gap-2 flex-1">
-            <Scissors className="w-5 h-5 text-primary" />
-            <span className="font-bold text-foreground tracking-tight">FELLAS BARBERS</span>
+
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div className="w-7 h-7 rounded-lg bg-[#C9A84C]/10 border border-[#C9A84C]/30 flex items-center justify-center flex-shrink-0">
+              <Scissors className="w-3.5 h-3.5 text-[#C9A84C]" />
+            </div>
+            <div className="min-w-0">
+              <span className="font-black text-foreground tracking-wider text-sm">FELLAS</span>
+              {step > 0 && step < 5 && (
+                <span className="text-xs text-muted-foreground ml-2">{STEP_LABELS[step]}</span>
+              )}
+            </div>
           </div>
         </div>
+
         {/* Progress Bar */}
         {step < 5 && (
-          <div className="max-w-lg mx-auto px-4 pb-3">
+          <div className="max-w-lg mx-auto px-4 pb-3 pt-2">
             <div className="flex gap-1.5">
               {[0, 1, 2, 3, 4].map(i => (
                 <div
                   key={i}
                   className={`h-1 flex-1 rounded-full transition-all duration-500 ${
-                    i <= step ? 'bg-primary' : 'bg-border'
+                    i < step ? 'bg-[#C9A84C]' : i === step ? 'bg-[#C9A84C]/60' : 'bg-border'
                   }`}
                 />
               ))}
@@ -141,17 +167,21 @@ export default function Booking() {
       </div>
 
       {/* Content */}
-      <div className="max-w-lg mx-auto px-4 py-6 pb-32">
+      <div className="max-w-lg mx-auto px-4 py-5 pb-32">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStep}
-            initial={{ opacity: 0, x: 20 }}
+            initial={{ opacity: 0, x: 16 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.2 }}
+            exit={{ opacity: 0, x: -16 }}
+            transition={{ duration: 0.18 }}
           >
             {currentStep === 'shop' && (
-              <ShopSelector shops={shops} onSelect={(shop) => { setSelectedShop(shop); setStep(1); }} />
+              <ShopSelector
+                shops={shops}
+                appointments={allAppointments}
+                onSelect={(shop) => { setSelectedShop(shop); setStep(1); }}
+              />
             )}
             {currentStep === 'services' && (
               <ServiceSelector
@@ -202,15 +232,17 @@ export default function Booking() {
           </motion.div>
         </AnimatePresence>
 
-        {/* Next Button for Services Step */}
+        {/* CTA Serviços */}
         {currentStep === 'services' && selectedServices.length > 0 && (
-          <div className="fixed bottom-24 left-4 right-4 lg:left-auto lg:right-8 lg:max-w-md z-40">
-            <button
+          <div className="fixed bottom-6 left-4 right-4 max-w-lg mx-auto z-40">
+            <motion.button
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
               onClick={handleNext}
-              className="w-full bg-card border border-primary/40 text-primary py-3 rounded-2xl font-semibold hover:bg-primary hover:text-primary-foreground transition-all"
+              className="w-full bg-[#C9A84C] text-black py-4 rounded-2xl font-bold text-sm shadow-lg shadow-[#C9A84C]/20 hover:bg-[#d4b55a] transition-colors"
             >
-              Continuar →
-            </button>
+              Continuar — {selectedServices.length} serviço{selectedServices.length > 1 ? 's' : ''} · €{total.toFixed(2)}
+            </motion.button>
           </div>
         )}
       </div>
