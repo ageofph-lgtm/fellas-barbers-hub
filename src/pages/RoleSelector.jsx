@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, ArrowLeft, Crown } from 'lucide-react';
 import { setSessionRole } from '../components/layout/AppLayout';
+import ThemeToggleFloat from '../components/ui/ThemeToggleFloat';
 
 // ── Brand ─────────────────────────────────────────────────────────────────────
 // Logo oficial: coroa com asas e tesoura cruzada
@@ -57,6 +58,7 @@ function FellasLogo({ size = 'md' }) {
       <div className="w-full h-full hidden items-center justify-center">
         <Crown className={size === 'lg' ? 'w-12 h-12' : 'w-8 h-8'} style={{ color: '#C8102E' }} />
       </div>
+      <ThemeToggleFloat />
     </div>
   );
 }
