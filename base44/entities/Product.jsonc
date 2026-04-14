@@ -1,0 +1,52 @@
+{
+  "name": "Product",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "pomada",
+        "shampoo",
+        "oleo",
+        "cera",
+        "aftershave",
+        "acessorio",
+        "outro"
+      ]
+    },
+    "barbershop_id": {
+      "type": "string"
+    },
+    "price": {
+      "type": "number"
+    },
+    "cost": {
+      "type": "number",
+      "description": "Custo de aquisi\u00e7\u00e3o"
+    },
+    "stock_quantity": {
+      "type": "number",
+      "default": 0
+    },
+    "min_stock": {
+      "type": "number",
+      "default": 5,
+      "description": "Alerta de stock m\u00ednimo"
+    },
+    "photo_url": {
+      "type": "string"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name",
+    "price",
+    "barbershop_id"
+  ]
+}

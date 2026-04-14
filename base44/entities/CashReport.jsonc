@@ -1,0 +1,67 @@
+{
+  "name": "CashReport",
+  "type": "object",
+  "properties": {
+    "barbershop_id": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "operator_email": {
+      "type": "string"
+    },
+    "operator_declared_cash": {
+      "type": "number",
+      "description": "Valor declarado em dinheiro na gaveta"
+    },
+    "operator_declared_card": {
+      "type": "number",
+      "description": "Valor declarado no TPA"
+    },
+    "expected_cash": {
+      "type": "number",
+      "description": "Valor esperado em dinheiro (calculado)"
+    },
+    "expected_card": {
+      "type": "number",
+      "description": "Valor esperado no TPA (calculado)"
+    },
+    "total_revenue": {
+      "type": "number"
+    },
+    "has_discrepancy": {
+      "type": "boolean",
+      "default": false
+    },
+    "cash_discrepancy": {
+      "type": "number",
+      "default": 0
+    },
+    "card_discrepancy": {
+      "type": "number",
+      "default": 0
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "declared",
+        "closed",
+        "reviewed"
+      ],
+      "default": "open"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "closed_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "barbershop_id",
+    "date"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "barber",
+        "user"
+      ],
+      "default": "user"
+    },
+    "barbershop_id": {
+      "type": "string",
+      "description": "Loja associada (para barbeiros)"
+    }
+  }
+}

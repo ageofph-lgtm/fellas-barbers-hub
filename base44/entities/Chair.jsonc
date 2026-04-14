@@ -1,0 +1,25 @@
+{
+  "name": "Chair",
+  "type": "object",
+  "properties": {
+    "barbershop_id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nome/n\u00famero da cadeira"
+    },
+    "barber_id": {
+      "type": "string",
+      "description": "Barbeiro atribu\u00eddo"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "barbershop_id",
+    "name"
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "name": "Barber",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "photo_url": {
+      "type": "string"
+    },
+    "barbershop_id": {
+      "type": "string",
+      "description": "ID da loja onde trabalha"
+    },
+    "specialties": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tags de especialidade (fade, barba, etc.)"
+    },
+    "languages": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "C\u00f3digos de idioma para bandeiras (pt, en, es, fr, etc.)"
+    },
+    "years_experience": {
+      "type": "number"
+    },
+    "rating": {
+      "type": "number",
+      "description": "Avalia\u00e7\u00e3o m\u00e9dia (1-5)"
+    },
+    "rating_count": {
+      "type": "number",
+      "default": 0
+    },
+    "commission_percent": {
+      "type": "number",
+      "default": 40,
+      "description": "Percentagem de comiss\u00e3o"
+    },
+    "monthly_goal": {
+      "type": "number",
+      "description": "Meta mensal em euros"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email do utilizador associado"
+    }
+  },
+  "required": [
+    "name",
+    "barbershop_id"
+  ]
+}

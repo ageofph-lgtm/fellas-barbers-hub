@@ -1,0 +1,55 @@
+{
+  "name": "Notification",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "cash_discrepancy",
+        "low_stock",
+        "no_show",
+        "new_booking",
+        "loyalty_reward",
+        "system"
+      ],
+      "description": "Tipo de notifica\u00e7\u00e3o"
+    },
+    "title": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "barbershop_id": {
+      "type": "string"
+    },
+    "target_role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "barber",
+        "all"
+      ]
+    },
+    "target_email": {
+      "type": "string",
+      "description": "Email espec\u00edfico do destinat\u00e1rio"
+    },
+    "is_read": {
+      "type": "boolean",
+      "default": false
+    },
+    "link": {
+      "type": "string",
+      "description": "Link para a\u00e7\u00e3o relacionada"
+    },
+    "metadata": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "type",
+    "title",
+    "message"
+  ]
+}

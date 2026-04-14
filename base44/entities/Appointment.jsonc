@@ -1,0 +1,155 @@
+{
+  "name": "Appointment",
+  "type": "object",
+  "properties": {
+    "barbershop_id": {
+      "type": "string"
+    },
+    "barber_id": {
+      "type": "string"
+    },
+    "client_name": {
+      "type": "string"
+    },
+    "client_phone": {
+      "type": "string"
+    },
+    "client_email": {
+      "type": "string"
+    },
+    "services": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "service_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          },
+          "duration_minutes": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "total_price": {
+      "type": "number"
+    },
+    "total_duration": {
+      "type": "number",
+      "description": "Dura\u00e7\u00e3o total em minutos"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "start_time": {
+      "type": "string",
+      "description": "HH:MM"
+    },
+    "end_time": {
+      "type": "string",
+      "description": "HH:MM"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "scheduled",
+        "checked_in",
+        "in_progress",
+        "completed",
+        "no_show",
+        "cancelled"
+      ],
+      "default": "scheduled"
+    },
+    "checkin_time": {
+      "type": "string",
+      "description": "ISO timestamp do check-in real"
+    },
+    "checkout_time": {
+      "type": "string",
+      "description": "ISO timestamp do checkout real"
+    },
+    "actual_duration": {
+      "type": "number",
+      "description": "Dura\u00e7\u00e3o real em minutos"
+    },
+    "upsells": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          }
+        }
+      },
+      "description": "Extras adicionados durante o atendimento"
+    },
+    "comanda_locked": {
+      "type": "boolean",
+      "default": false,
+      "description": "Comanda bloqueada ap\u00f3s checkout"
+    },
+    "payment_method": {
+      "type": "string",
+      "enum": [
+        "cash",
+        "card",
+        "mbway",
+        "transfer",
+        "pending"
+      ],
+      "default": "pending"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "loyalty_stamp_counted": {
+      "type": "boolean",
+      "default": false,
+      "description": "Selo de fidelidade contabilizado"
+    },
+    "comanda_edits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "edited_by": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string"
+          },
+          "old_value": {
+            "type": "string"
+          },
+          "new_value": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Log de altera\u00e7\u00f5es \u00e0 comanda ap\u00f3s bloqueio"
+    }
+  },
+  "required": [
+    "barbershop_id",
+    "barber_id",
+    "client_name",
+    "client_phone",
+    "date",
+    "start_time"
+  ]
+}

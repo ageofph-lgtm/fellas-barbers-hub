@@ -1,0 +1,43 @@
+{
+  "name": "LoyaltyCard",
+  "type": "object",
+  "properties": {
+    "client_phone": {
+      "type": "string",
+      "description": "N\u00famero de telem\u00f3vel do cliente (chave \u00fanica)"
+    },
+    "client_name": {
+      "type": "string"
+    },
+    "stamps": {
+      "type": "number",
+      "default": 0,
+      "description": "N\u00famero de selos acumulados (0-10)"
+    },
+    "total_redeemed": {
+      "type": "number",
+      "default": 0,
+      "description": "Total de cart\u00f5es j\u00e1 resgatados"
+    },
+    "stamp_history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "appointment_id": {
+            "type": "string"
+          },
+          "barbershop_id": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "client_phone"
+  ]
+}
