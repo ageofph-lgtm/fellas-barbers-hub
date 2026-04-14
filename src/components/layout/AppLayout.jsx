@@ -1,9 +1,11 @@
 import React from 'react';
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Calendar, Scissors, BarChart3, Users, Package, Bell, LogOut, Menu, X, ChevronDown } from 'lucide-react';
+import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Home, Calendar, Scissors, BarChart3, Users, Package, LogOut, Menu, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
+
+const ADMIN_EMAILS = ['ageofph@gmail.com'];
 
 const NAV_ITEMS_ADMIN = [
   { path: '/admin', icon: BarChart3, label: 'Dashboard' },
@@ -23,15 +25,14 @@ export default function AppLayout() {
   const [user, setUser] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
-  const isAdmin = user?.role === 'admin';
-  const isBarber = user?.role === 'barber' || user?.role === 'user';
+  const isAdmin = user?.role === 'admin' || ADMIN_EMAILS.includes(user?.email);
   const navItems = isAdmin ? NAV_ITEMS_ADMIN : NAV_ITEMS_BARBER;
+  const roleLabel = isAdmin ? 'Admin' : 'Barbeiro';
 
   const handleLogout = () => {
     base44.auth.logout('/');
@@ -62,7 +63,7 @@ export default function AppLayout() {
                 to={item.path}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
                   isActive
-                    ? 'bg-primary/10 text-primary gold-glow'
+                    ? 'bg-primary/10 text-primary'
                     : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
                 }`}
               >
@@ -80,7 +81,7 @@ export default function AppLayout() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground truncate">{user?.full_name || 'Utilizador'}</p>
-              <p className="text-xs text-muted-foreground capitalize">{user?.role || 'user'}</p>
+              <p className="text-xs text-muted-foreground">{roleLabel}</p>
             </div>
             <button onClick={handleLogout} className="text-muted-foreground hover:text-foreground">
               <LogOut className="w-4 h-4" />
@@ -96,14 +97,9 @@ export default function AppLayout() {
             <Scissors className="w-5 h-5 text-primary" />
             <span className="font-bold text-foreground">FELLAS</span>
           </Link>
-          <div className="flex items-center gap-2">
-            <Link to="/notifications" className="p-2 text-muted-foreground hover:text-foreground">
-              <Bell className="w-5 h-5" />
-            </Link>
-            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-muted-foreground hover:text-foreground">
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
-          </div>
+          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-muted-foreground hover:text-foreground">
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
         </div>
 
         <AnimatePresence>
