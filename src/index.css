@@ -5,6 +5,7 @@
 @tailwind utilities;
 
 @layer base {
+  /* ── DARK (default) ── */
   :root {
     --font-inter: 'Inter', sans-serif;
     --background: 0 0% 3.1%;
@@ -40,6 +41,42 @@
     --sidebar-accent-foreground: 40 10% 90%;
     --sidebar-border: 0 0% 14%;
     --sidebar-ring: 43 52% 54%;
+  }
+
+  /* ── LIGHT — inverte preto ↔ branco, mantém vermelho intacto ── */
+  .light {
+    --background: 0 0% 98%;
+    --foreground: 0 0% 8%;
+    --card: 0 0% 94%;
+    --card-foreground: 0 0% 8%;
+    --popover: 0 0% 94%;
+    --popover-foreground: 0 0% 8%;
+    --primary: 43 52% 44%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 90%;
+    --secondary-foreground: 0 0% 15%;
+    --muted: 0 0% 90%;
+    --muted-foreground: 0 0% 42%;
+    --accent: 43 52% 44%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 82%;
+    --input: 0 0% 82%;
+    --ring: 43 52% 44%;
+    --chart-1: 43 52% 44%;
+    --chart-2: 43 40% 38%;
+    --chart-3: 43 30% 30%;
+    --chart-4: 43 20% 52%;
+    --chart-5: 43 60% 55%;
+    --sidebar-background: 0 0% 96%;
+    --sidebar-foreground: 0 0% 15%;
+    --sidebar-primary: 43 52% 44%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 0 0% 90%;
+    --sidebar-accent-foreground: 0 0% 15%;
+    --sidebar-border: 0 0% 82%;
+    --sidebar-ring: 43 52% 44%;
   }
 
   .dark {
@@ -84,6 +121,7 @@
   }
   body {
     @apply bg-background text-foreground font-inter;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 }
 
@@ -97,5 +135,8 @@
   .glass-card {
     backdrop-filter: blur(12px);
     background: rgba(17, 17, 17, 0.8);
+  }
+  .light .glass-card {
+    background: rgba(245, 245, 245, 0.85);
   }
 }
