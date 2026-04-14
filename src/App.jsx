@@ -43,7 +43,7 @@ const AuthenticatedApp = () => {
 
   return (
     <Routes>
-      {/* Landing - seleção de perfil */}
+      {/* Landing */}
       <Route path="/" element={<RoleSelector />} />
 
       {/* Área de Cliente */}
@@ -52,7 +52,9 @@ const AuthenticatedApp = () => {
 
       {/* Barbeiro & Admin - com sidebar */}
       <Route element={<AppLayout />}>
+        {/* Barbeiro por ID (modo teste) ou genérico */}
         <Route path="/barber" element={<BarberDashboard />} />
+        <Route path="/barber/:barberId" element={<BarberDashboard />} />
         <Route path="/barber/commissions" element={<BarberDashboard />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/appointments" element={<AdminAppointments />} />
