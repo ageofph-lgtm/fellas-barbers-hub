@@ -11,6 +11,7 @@ import BookingConfirmation from '../components/booking/BookingConfirmation';
 import BookingSuccess from '../components/booking/BookingSuccess';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import ThemeToggleFloat from '../components/ui/ThemeToggleFloat';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const RED = '#C8102E';
@@ -148,6 +149,7 @@ function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName }) {
           </div>
         ))}
       </div>
+      <ThemeToggleFloat />
     </div>
   );
 }
