@@ -4,7 +4,6 @@ import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Home, Heart, Star, ChevronRight, Navigation, Loader2, Scissors, User, MapPin } from 'lucide-react';
-import ShopSelector from '../components/booking/ShopSelector';
 import ServiceSelector from '../components/booking/ServiceSelector';
 import BarberSelector from '../components/booking/BarberSelector';
 import TimeSlotPicker from '../components/booking/TimeSlotPicker';
@@ -16,8 +15,8 @@ import ThemeToggleFloat from '../components/ui/ThemeToggleFloat';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const RED = '#C8102E';
-const STEPS = ['geo', 'profile', 'shop', 'services', 'barber', 'time', 'confirm', 'success'];
-const STEP_LABELS = [null, null, 'Loja', 'Serviços', 'Barbeiro', 'Horário', 'Confirmação'];
+const STEPS = ['geo', 'profile', 'services', 'barber', 'time', 'confirm', 'success'];
+const STEP_LABELS = [null, null, 'Serviços', 'Barbeiro', 'Horário', 'Confirmação', null];
 
 // ── Prefs ─────────────────────────────────────────────────────────────────────
 const KEY = 'fellas_client_prefs';
@@ -430,7 +429,7 @@ export default function Booking() {
 
   const startBooking = ({ skipToShop, skipToBarber } = {}) => {
     setEditingName(false);
-    if (skipToShop) { setSelectedShop(skipToShop); setStep(3); }
+    if (skipToShop) { setSelectedShop(skipToShop); setStep(2); }
     else if (skipToBarber) {
       const full = allBarbers.find(b => b.id === skipToBarber.id);
       if (full) { const shop = shops.find(s => s.id === full.barbershop_id); if (shop) setSelectedShop(shop); setSelectedBarber(full); setStep(5); }
@@ -454,11 +453,11 @@ export default function Booking() {
     updatePrefs({ clientName: clientInfo.name, clientPhone: clientInfo.phone, clientEmail: clientInfo.email });
     setCreatedAppointment(appt);
     setIsSubmitting(false);
-    setStep(7);
+    setStep(6);
   };
 
   const resetBooking = () => { setStep(1); setSelectedShop(null); setSelectedServices([]); setSelectedBarber(null); setSelectedSlot(null); setNotes(''); setCreatedAppointment(null); };
-  const goBack = () => { if (step === 2) setStep(1); else if (step > 2 && step < 7) setStep(step - 1); };
+  const goBack = () => { if (step >= 2 && step < 6) setStep(step - 1); };
 
   const currentStep = STEPS[step];
   const progressStep = step - 2;
@@ -469,7 +468,7 @@ export default function Booking() {
       <div className="sticky top-0 z-40 border-b border-border"
         style={{ background: 'rgba(10,10,10,0.95)', backdropFilter: 'blur(12px)' }}>
         <div className="max-w-lg mx-auto px-4 pt-4 pb-2 flex items-center gap-3">
-          {step > 1 && step < 7 ? (
+          {step > 1 && step < 6 ? (
             <button onClick={goBack}
               className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground flex-shrink-0">
               <ArrowLeft className="w-4 h-4" />
@@ -490,7 +489,7 @@ export default function Booking() {
               </svg>
             </div>
             <span className="font-black text-foreground tracking-wider text-sm">FELLAS</span>
-            {step > 1 && step < 7 && STEP_LABELS[step] && (
+            {step > 1 && step < 6 && STEP_LABELS[step] && (
               <span className="text-xs text-muted-foreground">· {STEP_LABELS[step]}</span>
             )}
             {userLocation && step >= 2 && (
@@ -502,7 +501,7 @@ export default function Booking() {
         </div>
 
         {/* Progress */}
-        {step >= 2 && step < 7 && (
+        {step >= 2 && step < 6 && (
           <div className="max-w-lg mx-auto px-4 pb-3 pt-1">
             <div className="flex gap-1.5">
               {[0,1,2,3,4].map(i => (
@@ -532,11 +531,6 @@ export default function Booking() {
               <NameEditor initialName={prefs.clientName}
                 onSave={name => { updatePrefs({ clientName: name }); setClientInfo(p => ({ ...p, name })); setEditingName(false); }} />
             )}
-            {currentStep === 'shop' && (
-              <ShopSelector shops={shops} userLocation={userLocation} favoriteShopId={prefs.favoriteShopId}
-                onSelect={shop => { setSelectedShop(shop); setStep(3); }}
-                onFavorite={shop => updatePrefs({ favoriteShopId: shop.id })} />
-            )}
             {currentStep === 'services' && (
               <ServiceSelector services={services} selected={selectedServices} onToggle={toggleService}
                 total={total} totalDuration={totalDuration} />
@@ -544,13 +538,13 @@ export default function Booking() {
             {currentStep === 'barber' && (
               <BarberSelectorWithFav barbers={barbers} selected={selectedBarber}
                 favoriteBarberRelId={prefs.favoriteBarberRelId}
-                onSelect={b => { setSelectedBarber(b); setStep(5); }}
+                onSelect={b => { setSelectedBarber(b); setStep(4); }}
                 onFavorite={b => updatePrefs({ favoriteBarberRelId: b.id })} />
             )}
             {currentStep === 'time' && (
               <TimeSlotPicker appointments={appointments} totalDuration={totalDuration}
                 shopHours={selectedShop?.opening_hours} selectedSlot={selectedSlot}
-                onSelect={slot => { setSelectedSlot(slot); setStep(6); }} />
+                onSelect={slot => { setSelectedSlot(slot); setStep(5); }} />
             )}
             {currentStep === 'confirm' && (
               <BookingConfirmation shop={selectedShop} barber={selectedBarber} services={selectedServices}
@@ -568,7 +562,7 @@ export default function Booking() {
         {currentStep === 'services' && selectedServices.length > 0 && (
           <div className="fixed bottom-6 left-4 right-4 max-w-lg mx-auto z-40">
             <motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-              onClick={() => setStep(4)}
+              onClick={() => setStep(3)}
               className="w-full py-4 rounded-2xl font-bold text-sm transition-all"
               style={{ background: RED, color: '#fff', boxShadow: `0 8px 24px rgba(200,16,46,0.3)` }}>
               Continuar — {selectedServices.length} serviço{selectedServices.length > 1 ? 's' : ''} · €{total.toFixed(2)}
