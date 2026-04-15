@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
+import BarberLoader from '../components/ui/BarberLoader';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -55,7 +56,7 @@ function GeoScreen({ onResult }) {
             className="w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-60"
             style={{ background: RED, color: '#fff' }}
           >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation className="w-4 h-4" />}
+            {loading ? <BarberLoader size="sm" /> : <Navigation className="w-4 h-4" />}
             {loading ? 'A detectar...' : 'Usar a minha localização'}
           </button>
           <button onClick={() => onResult(null)}
