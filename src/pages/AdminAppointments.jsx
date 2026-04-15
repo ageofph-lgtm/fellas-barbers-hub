@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import BarberLoader from '../components/ui/BarberLoader';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { format, subDays, addDays } from 'date-fns';
