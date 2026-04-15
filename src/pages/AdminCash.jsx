@@ -108,7 +108,56 @@ function GlobalOverview({ shops, allAppointments, allReports }) {
         </div>
       </div>
 
-      {/* Por unidade */}
+      {/* Confronto Walk-in vs Digital */}
+      {(() => {
+        const walkins  = completed.filter(a => a.is_walkin);
+        const digital  = completed.filter(a => !a.is_walkin);
+        const paidDigital = completed.filter(a => a.payment_status === 'paid');
+        const unpaid   = completed.filter(a => a.payment_status !== 'paid');
+        const walkinRev  = walkins.reduce((s,a) => s+(a.total_price||0), 0);
+        const digitalRev = digital.reduce((s,a) => s+(a.total_price||0), 0);
+        const hasAlert   = unpaid.length > 0 || walkins.length > 2;
+        return (
+          <div className={`rounded-2xl border p-5 ${hasAlert ? 'border-yellow-500/30' : 'border-border'}`}
+            style={{ background: hasAlert ? 'rgba(234,179,8,0.05)' : 'var(--card)' }}>
+            <h3 className="text-sm font-bold text-foreground mb-4 flex items-center gap-2">
+              <Receipt className="w-4 h-4" style={{ color: hasAlert ? '#eab308' : RED }} />
+              Rastreabilidade — Hoje
+              {hasAlert && <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400">ATENÇÃO</span>}
+            </h3>
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="rounded-xl p-3 text-center" style={{ background: 'var(--secondary)' }}>
+                <p className="text-lg font-black text-foreground">{digital.length}</p>
+                <p className="text-[11px] text-muted-foreground">Via app (marcação)</p>
+                <p className="text-xs font-bold mt-0.5" style={{ color: RED }}>€{digitalRev.toFixed(0)}</p>
+              </div>
+              <div className="rounded-xl p-3 text-center border"
+                style={{ background: walkins.length > 0 ? 'rgba(234,179,8,0.08)' : 'var(--secondary)', borderColor: walkins.length > 0 ? 'rgba(234,179,8,0.25)' : 'var(--border)' }}>
+                <p className="text-lg font-black text-foreground">{walkins.length}</p>
+                <p className="text-[11px] text-muted-foreground">Walk-ins registados</p>
+                <p className="text-xs font-bold mt-0.5" style={{ color: '#eab308' }}>€{walkinRev.toFixed(0)}</p>
+              </div>
+            </div>
+            {unpaid.length > 0 && (
+              <div className="flex items-start gap-2 p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+                <span className="text-yellow-400 text-base flex-shrink-0">⚠️</span>
+                <p className="text-xs text-yellow-300">
+                  <strong>{unpaid.length} corte{unpaid.length!==1?'s':''}</strong> concluído{unpaid.length!==1?'s':''} sem pagamento confirmado no app.
+                  {' '}Confirma com os barbeiros o método de pagamento.
+                </p>
+              </div>
+            )}
+            {unpaid.length === 0 && completed.length > 0 && (
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-green-500/10 border border-green-500/20">
+                <span className="text-green-400 text-base">✓</span>
+                <p className="text-xs text-green-300">Todos os cortes têm pagamento registado.</p>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Por unidade */}}
       <div className="rounded-2xl border border-border bg-card overflow-hidden">
         <div className="p-4 border-b border-border">
           <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
