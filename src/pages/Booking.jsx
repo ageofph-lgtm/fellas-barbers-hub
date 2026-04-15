@@ -73,7 +73,7 @@ function GeoScreen({ onResult }) {
 function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName, onFavoriteShop, userLocation }) {
   const name = prefs.clientName || '';
 
-  // Helper: distância em km entre dois pontos (Haversine)
+  // ── Haversine distance ───────────────────────────────────────────────────
   function calcDist(lat1, lon1, lat2, lon2) {
     if (!lat1 || !lat2) return null;
     const R = 6371;
@@ -83,13 +83,55 @@ function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName, onFavorit
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   }
 
-  // Ordenar lojas: favorita primeiro, depois por distância se GPS disponível
+  // ── Horário por dia ──────────────────────────────────────────────────────
+  function getHoursForDay(shop, dayIndex) {
+    // dayIndex: 0=Dom,1=Seg..6=Sab
+    if (dayIndex === 0) return shop.hours_sunday || 'Fechado';
+    if (dayIndex === 6) return shop.hours_saturday || shop.hours_weekday || 'Fechado';
+    return shop.hours_weekday || 'Fechado';
+  }
+
+  function isOpenByHours(hours) {
+    if (!hours || hours.toLowerCase().includes('fechado')) return false;
+    const match = hours.match(/(\d{1,2})[h:](\d{0,2})\s*[-–]\s*(\d{1,2})[h:](\d{0,2})/);
+    if (!match) return false;
+    const now = new Date();
+    const cur = now.getHours() * 60 + (parseInt(now.getMinutes()) || 0);
+    const open  = parseInt(match[1]) * 60 + (parseInt(match[2]) || 0);
+    const close = parseInt(match[3]) * 60 + (parseInt(match[4]) || 0);
+    return cur >= open && cur < close;
+  }
+
+  function isOpenNow(shop) {
+    return isOpenByHours(getHoursForDay(shop, new Date().getDay()));
+  }
+
+  // ── Next 3 days schedule (hoje + amanhã + depois) ────────────────────────
+  function getNextDays(shop) {
+    const today = new Date();
+    const days = [];
+    const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    for (let i = 0; i < 3; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      const idx = d.getDay();
+      const hours = getHoursForDay(shop, idx);
+      days.push({
+        label: i === 0 ? 'Hoje' : i === 1 ? 'Amanhã' : dayNames[idx],
+        hours: hours === 'Fechado' ? 'Fechado' : hours,
+        isToday: i === 0,
+        isClosed: !hours || hours.toLowerCase().includes('fechado'),
+      });
+    }
+    return days;
+  }
+
+  // ── Ordenar lojas ────────────────────────────────────────────────────────
   const sortedShops = [...shops].sort((a, b) => {
     const aFav = a.id === prefs.favoriteShopId;
     const bFav = b.id === prefs.favoriteShopId;
     if (aFav && !bFav) return -1;
     if (!aFav && bFav) return 1;
-    // por distância
     if (userLocation && a.lat && b.lat) {
       const dA = calcDist(userLocation.lat, userLocation.lon, parseFloat(a.lat), parseFloat(a.lon));
       const dB = calcDist(userLocation.lat, userLocation.lon, parseFloat(b.lat), parseFloat(b.lon));
@@ -98,28 +140,8 @@ function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName, onFavorit
     return 0;
   });
 
-  // Horário de hoje
-  const dayOfWeek = new Date().getDay(); // 0=Dom,6=Sab
-  function getTodayHours(shop) {
-    if (dayOfWeek === 0 && shop.hours_sunday) return shop.hours_sunday;
-    if (dayOfWeek === 6 && shop.hours_saturday) return shop.hours_saturday;
-    return shop.hours_weekday || null;
-  }
-
-  function isOpenNow(shop) {
-    const hours = getTodayHours(shop);
-    if (!hours) return false;
-    const match = hours.match(/(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})/);
-    if (!match) return false;
-    const now = new Date();
-    const cur = now.getHours() * 60 + now.getMinutes();
-    const open = parseInt(match[1]) * 60 + parseInt(match[2]);
-    const close = parseInt(match[3]) * 60 + parseInt(match[4]);
-    return cur >= open && cur < close;
-  }
-
   return (
-    <div className="space-y-4 pb-4">
+    <div className="space-y-4 pb-6">
       {/* Greeting */}
       <div className="flex items-center gap-3 pt-1">
         <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
@@ -136,22 +158,23 @@ function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName, onFavorit
         </div>
       </div>
 
-      {/* Label */}
+      {/* Label + GPS indicator */}
       <div className="flex items-center justify-between">
         <p className="text-xs font-black text-muted-foreground uppercase tracking-wider">Escolhe a loja</p>
         {userLocation && (
           <span className="text-[10px] font-bold flex items-center gap-1" style={{ color: '#22c55e' }}>
-            <Navigation className="w-3 h-3" /> Ordenado por distância
+            <Navigation className="w-3 h-3" /> Por distância
           </span>
         )}
       </div>
 
-      {/* Lista unificada de lojas */}
-      <div className="space-y-2">
+      {/* Cards das lojas */}
+      <div className="space-y-3">
         {sortedShops.map((shop, i) => {
           const isFav = shop.id === prefs.favoriteShopId;
-          const todayHours = getTodayHours(shop);
           const open = isOpenNow(shop);
+          const todayHours = getHoursForDay(shop, new Date().getDay());
+          const nextDays = getNextDays(shop);
           const dist = userLocation && shop.lat
             ? calcDist(userLocation.lat, userLocation.lon, parseFloat(shop.lat), parseFloat(shop.lon))
             : null;
@@ -161,11 +184,11 @@ function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName, onFavorit
               key={shop.id}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
+              transition={{ delay: i * 0.06 }}
               className="rounded-2xl overflow-hidden"
               style={{
                 border: isFav ? `1.5px solid ${RED}` : '1px solid var(--border)',
-                background: isFav ? 'rgba(200,16,46,0.05)' : 'var(--card)',
+                background: isFav ? 'rgba(200,16,46,0.04)' : 'var(--card)',
                 boxShadow: isFav ? `0 4px 20px rgba(200,16,46,0.12)` : 'none',
               }}
             >
@@ -177,26 +200,50 @@ function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName, onFavorit
                 </div>
               )}
 
+              {/* Linha principal */}
               <div className="flex items-center gap-3 px-4 pt-3 pb-2">
                 {/* Ícone */}
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
                   style={{ background: isFav ? 'rgba(200,16,46,0.12)' : 'var(--secondary)' }}>
                   {shop.photo_url
                     ? <img src={shop.photo_url} alt={shop.name} className="w-full h-full object-cover rounded-xl" />
-                    : <MapPin className="w-5 h-5" style={{ color: isFav ? RED : 'var(--muted-foreground)' }} />
+                    : <MapPin className="w-6 h-6" style={{ color: isFav ? RED : 'var(--muted-foreground)' }} />
                   }
                 </div>
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-foreground text-sm leading-tight">{shop.name}</p>
-                  {shop.address && (
-                    <p className="text-xs text-muted-foreground mt-0.5 truncate">{shop.address}</p>
-                  )}
+                  {shop.address && <p className="text-xs text-muted-foreground mt-0.5 truncate">{shop.address}</p>}
+                  {/* Badge aberto + distância + horário hoje */}
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    <span className="flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full"
+                      style={{
+                        background: open ? 'rgba(34,197,94,0.12)' : 'rgba(100,100,100,0.1)',
+                        color: open ? '#22c55e' : 'var(--muted-foreground)',
+                        border: open ? '1px solid rgba(34,197,94,0.25)' : '1px solid var(--border)',
+                      }}>
+                      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                        style={{ background: open ? '#22c55e' : 'var(--muted-foreground)' }} />
+                      {open ? 'Aberto' : 'Fechado'}
+                    </span>
+                    {dist !== null && (
+                      <span className="text-[11px] text-muted-foreground flex items-center gap-1 font-medium px-2 py-0.5 rounded-full"
+                        style={{ background: 'var(--secondary)', border: '1px solid var(--border)' }}>
+                        <Navigation className="w-3 h-3" />
+                        {dist < 1 ? `${Math.round(dist*1000)}m` : `${dist.toFixed(1)} km`}
+                      </span>
+                    )}
+                    {todayHours && todayHours !== 'Fechado' && (
+                      <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                        <Clock className="w-3 h-3" />{todayHours}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Ações */}
-                <div className="flex items-center gap-1.5 flex-shrink-0">
+                <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
                   <button onClick={() => onFavoriteShop(shop)}
                     className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-secondary transition-colors">
                     <Heart className="w-4 h-4"
@@ -204,37 +251,34 @@ function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName, onFavorit
                   </button>
                   <button onClick={() => onBook({ skipToShop: shop })}
                     className="w-8 h-8 rounded-xl flex items-center justify-center transition-all"
-                    style={{ background: isFav ? RED : 'var(--secondary)', color: isFav ? '#fff' : 'var(--muted-foreground)' }}>
+                    style={{ background: 'rgba(200,16,46,0.1)', color: RED, border: '1px solid rgba(200,16,46,0.25)' }}>
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
-              {/* Linha inferior: horário + distância + estado aberto/fechado */}
-              <div className="flex items-center gap-3 px-4 pb-3 flex-wrap">
-                {/* Estado aberto */}
-                <span className="flex items-center gap-1 text-[11px] font-bold"
-                  style={{ color: open ? '#22c55e' : 'var(--muted-foreground)' }}>
-                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                    style={{ background: open ? '#22c55e' : 'var(--muted-foreground)' }} />
-                  {open ? 'Aberto agora' : 'Fechado'}
-                </span>
-
-                {/* Horário de hoje */}
-                {todayHours && (
-                  <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    {todayHours}
-                  </span>
-                )}
-
-                {/* Distância */}
-                {dist !== null && (
-                  <span className="text-[11px] text-muted-foreground ml-auto flex items-center gap-1">
-                    <Navigation className="w-3 h-3" />
-                    {dist < 1 ? `${Math.round(dist * 1000)}m` : `${dist.toFixed(1)}km`}
-                  </span>
-                )}
+              {/* Mini-grid horários: Hoje / Amanhã / Próximo dia */}
+              <div className="grid grid-cols-3 gap-1.5 px-4 pb-3">
+                {nextDays.map(({ label, hours, isToday, isClosed }) => (
+                  <div key={label} className="text-center rounded-xl py-1.5 px-1"
+                    style={{
+                      background: isToday
+                        ? isClosed ? 'rgba(100,100,100,0.08)' : 'rgba(200,16,46,0.08)'
+                        : 'var(--secondary)',
+                      border: isToday
+                        ? isClosed ? '1px solid rgba(100,100,100,0.15)' : `1px solid rgba(200,16,46,0.2)`
+                        : '1px solid var(--border)',
+                    }}>
+                    <p className="text-[10px] font-black uppercase tracking-wider"
+                      style={{ color: isToday && !isClosed ? RED : 'var(--muted-foreground)' }}>
+                      {label}
+                    </p>
+                    <p className="text-[11px] font-bold mt-0.5 leading-tight"
+                      style={{ color: isClosed ? 'var(--muted-foreground)' : 'var(--foreground)' }}>
+                      {isClosed ? '—' : hours}
+                    </p>
+                  </div>
+                ))}
               </div>
             </motion.div>
           );
