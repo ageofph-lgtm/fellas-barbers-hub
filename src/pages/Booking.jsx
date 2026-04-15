@@ -70,21 +70,58 @@ function GeoScreen({ onResult }) {
 }
 
 // ── Client Profile ────────────────────────────────────────────────────────────
-function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName, onFavoriteShop }) {
-  const favShop   = shops.find(s => s.id === prefs.favoriteShopId);
-  const name      = prefs.clientName || '';
+function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName, onFavoriteShop, userLocation }) {
+  const name = prefs.clientName || '';
 
-  // Ordenar: favorita sempre primeiro
+  // Helper: distância em km entre dois pontos (Haversine)
+  function calcDist(lat1, lon1, lat2, lon2) {
+    if (!lat1 || !lat2) return null;
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+
+  // Ordenar lojas: favorita primeiro, depois por distância se GPS disponível
   const sortedShops = [...shops].sort((a, b) => {
-    if (a.id === prefs.favoriteShopId) return -1;
-    if (b.id === prefs.favoriteShopId) return 1;
+    const aFav = a.id === prefs.favoriteShopId;
+    const bFav = b.id === prefs.favoriteShopId;
+    if (aFav && !bFav) return -1;
+    if (!aFav && bFav) return 1;
+    // por distância
+    if (userLocation && a.lat && b.lat) {
+      const dA = calcDist(userLocation.lat, userLocation.lon, parseFloat(a.lat), parseFloat(a.lon));
+      const dB = calcDist(userLocation.lat, userLocation.lon, parseFloat(b.lat), parseFloat(b.lon));
+      if (dA !== null && dB !== null) return dA - dB;
+    }
     return 0;
   });
 
+  // Horário de hoje
+  const dayOfWeek = new Date().getDay(); // 0=Dom,6=Sab
+  function getTodayHours(shop) {
+    if (dayOfWeek === 0 && shop.hours_sunday) return shop.hours_sunday;
+    if (dayOfWeek === 6 && shop.hours_saturday) return shop.hours_saturday;
+    return shop.hours_weekday || null;
+  }
+
+  function isOpenNow(shop) {
+    const hours = getTodayHours(shop);
+    if (!hours) return false;
+    const match = hours.match(/(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})/);
+    if (!match) return false;
+    const now = new Date();
+    const cur = now.getHours() * 60 + now.getMinutes();
+    const open = parseInt(match[1]) * 60 + parseInt(match[2]);
+    const close = parseInt(match[3]) * 60 + parseInt(match[4]);
+    return cur >= open && cur < close;
+  }
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 pb-4">
       {/* Greeting */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 pt-1">
         <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
           style={{ background: 'rgba(200,16,46,0.1)', border: `1px solid rgba(200,16,46,0.25)` }}>
           <User className="w-6 h-6" style={{ color: RED }} />
@@ -94,28 +131,42 @@ function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName, onFavorit
             {name ? `Olá, ${name.split(' ')[0]}!` : 'Bem-vindo à Fellas!'}
           </h2>
           <button onClick={onEditName} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-            {name ? 'Editar nome' : 'Adicionar o teu nome →'}
+            {name ? 'Editar nome →' : 'Adicionar o teu nome →'}
           </button>
         </div>
       </div>
 
-      {/* Todas as lojas — favorita destacada */}
-      <div className="space-y-2">
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Escolhe a loja</p>
+      {/* Label */}
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-black text-muted-foreground uppercase tracking-wider">Escolhe a loja</p>
+        {userLocation && (
+          <span className="text-[10px] font-bold flex items-center gap-1" style={{ color: '#22c55e' }}>
+            <Navigation className="w-3 h-3" /> Ordenado por distância
+          </span>
+        )}
+      </div>
 
+      {/* Lista unificada de lojas */}
+      <div className="space-y-2">
         {sortedShops.map((shop, i) => {
           const isFav = shop.id === prefs.favoriteShopId;
+          const todayHours = getTodayHours(shop);
+          const open = isOpenNow(shop);
+          const dist = userLocation && shop.lat
+            ? calcDist(userLocation.lat, userLocation.lon, parseFloat(shop.lat), parseFloat(shop.lon))
+            : null;
+
           return (
             <motion.div
               key={shop.id}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.06 }}
+              transition={{ delay: i * 0.05 }}
               className="rounded-2xl overflow-hidden"
               style={{
                 border: isFav ? `1.5px solid ${RED}` : '1px solid var(--border)',
                 background: isFav ? 'rgba(200,16,46,0.05)' : 'var(--card)',
-                boxShadow: isFav ? `0 4px 18px rgba(200,16,46,0.14)` : 'none',
+                boxShadow: isFav ? `0 4px 20px rgba(200,16,46,0.12)` : 'none',
               }}
             >
               {/* Badge favorita */}
@@ -126,8 +177,8 @@ function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName, onFavorit
                 </div>
               )}
 
-              <div className="flex items-center gap-3 p-4">
-                {/* Ícone / foto */}
+              <div className="flex items-center gap-3 px-4 pt-3 pb-2">
+                {/* Ícone */}
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
                   style={{ background: isFav ? 'rgba(200,16,46,0.12)' : 'var(--secondary)' }}>
                   {shop.photo_url
@@ -138,51 +189,65 @@ function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName, onFavorit
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-foreground text-sm">{shop.name}</p>
-                  {shop.address && <p className="text-xs text-muted-foreground mt-0.5 truncate">{shop.address}</p>}
+                  <p className="font-bold text-foreground text-sm leading-tight">{shop.name}</p>
+                  {shop.address && (
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">{shop.address}</p>
+                  )}
                 </div>
 
                 {/* Ações */}
                 <div className="flex items-center gap-1.5 flex-shrink-0">
-                  {/* Favoritar */}
-                  <button
-                    onClick={() => onFavoriteShop(shop)}
-                    className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors hover:bg-secondary"
-                    title={isFav ? 'Remover favorita' : 'Marcar como favorita'}
-                  >
-                    <Heart className="w-4 h-4 transition-all"
+                  <button onClick={() => onFavoriteShop(shop)}
+                    className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-secondary transition-colors">
+                    <Heart className="w-4 h-4"
                       style={{ color: isFav ? RED : 'var(--muted-foreground)', fill: isFav ? RED : 'transparent' }} />
                   </button>
-                  {/* Agendar nesta loja */}
-                  <button
-                    onClick={() => onBook({ skipToShop: shop })}
+                  <button onClick={() => onBook({ skipToShop: shop })}
                     className="w-8 h-8 rounded-xl flex items-center justify-center transition-all"
-                    style={{
-                      background: isFav ? RED : 'var(--secondary)',
-                      color: isFav ? '#fff' : 'var(--muted-foreground)',
-                    }}
-                    title="Agendar nesta loja"
-                  >
+                    style={{ background: isFav ? RED : 'var(--secondary)', color: isFav ? '#fff' : 'var(--muted-foreground)' }}>
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
+              </div>
+
+              {/* Linha inferior: horário + distância + estado aberto/fechado */}
+              <div className="flex items-center gap-3 px-4 pb-3 flex-wrap">
+                {/* Estado aberto */}
+                <span className="flex items-center gap-1 text-[11px] font-bold"
+                  style={{ color: open ? '#22c55e' : 'var(--muted-foreground)' }}>
+                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                    style={{ background: open ? '#22c55e' : 'var(--muted-foreground)' }} />
+                  {open ? 'Aberto agora' : 'Fechado'}
+                </span>
+
+                {/* Horário de hoje */}
+                {todayHours && (
+                  <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {todayHours}
+                  </span>
+                )}
+
+                {/* Distância */}
+                {dist !== null && (
+                  <span className="text-[11px] text-muted-foreground ml-auto flex items-center gap-1">
+                    <Navigation className="w-3 h-3" />
+                    {dist < 1 ? `${Math.round(dist * 1000)}m` : `${dist.toFixed(1)}km`}
+                  </span>
+                )}
               </div>
             </motion.div>
           );
         })}
       </div>
 
-      {/* CTA global */}
-      <motion.button whileTap={{ scale: 0.98 }} onClick={() => onBook({})}
-        className="w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all"
-        style={{ background: RED, color: '#fff', boxShadow: '0 8px 24px rgba(200,16,46,0.25)' }}>
-        <Scissors className="w-4 h-4" />
-        Ver todas as unidades
-      </motion.button>
-
-      {/* Stats rápidas */}
-      <div className="grid grid-cols-3 gap-2">
-        {[['3', 'Unidades'], ['1000+', 'Reviews'], ['4.9★', 'Rating']].map(([v, l]) => (
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-2 pt-1">
+        {[
+          [String(shops.length || '—'), 'Unidades'],
+          ['1000+', 'Reviews'],
+          ['4.9★', 'Rating'],
+        ].map(([v, l]) => (
           <div key={l} className="p-3 rounded-xl bg-card border border-border text-center">
             <p className="text-base font-black" style={{ color: RED }}>{v}</p>
             <p className="text-[11px] text-muted-foreground mt-0.5">{l}</p>
@@ -193,7 +258,6 @@ function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName, onFavorit
     </div>
   );
 }
-
 
 function NameEditor({ initialName, onSave }) {
   const [val, setVal] = useState(initialName || '');
@@ -418,7 +482,7 @@ export default function Booking() {
           >
             {currentStep === 'geo'     && <GeoScreen onResult={loc => { setUserLocation(loc); setStep(1); }} />}
             {currentStep === 'profile' && !editingName && (
-              <ClientProfile prefs={prefs} shops={shops} allBarbers={allBarbers} onBook={startBooking} onEditName={() => setEditingName(true)} onFavoriteShop={shop => updatePrefs({ favoriteShopId: shop.id })} />
+              <ClientProfile prefs={prefs} shops={shops} allBarbers={allBarbers} userLocation={userLocation} onBook={startBooking} onEditName={() => setEditingName(true)} onFavoriteShop={shop => updatePrefs({ favoriteShopId: shop.id })} />
             )}
             {currentStep === 'profile' && editingName && (
               <NameEditor initialName={prefs.clientName}
