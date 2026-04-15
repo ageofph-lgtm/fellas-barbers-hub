@@ -363,7 +363,7 @@ function PaymentModal({ appt, onClose, onPaid }) {
       });
       setPaid(true);
       // Fechar e refrescar após animação
-      setTimeout(() => { onPaid(); onClose(); }, 1200);
+      setTimeout(() => { onPaid(appt.id, method); onClose(); }, 1200);
     } catch (e) { console.error(e); setLoading(false); }
   };
 
@@ -634,9 +634,19 @@ export default function BarberDashboard() {
 
   const { mutate: changeStatus } = useMutation({
     mutationFn: ({ id, status }) => base44.entities.Appointment.update(id, { status }),
+    onMutate: ({ id, status }) => {
+      // Optimistic update imediato
+      queryClient.setQueryData(['barber-today', barber?.id], (old = []) =>
+        old.map(a => a.id === id ? { ...a, status } : a)
+      );
+    },
     onSuccess: () => {
       refetchToday();
       queryClient.invalidateQueries({ queryKey: ['barber-month'] });
+    },
+    onError: () => {
+      // Reverter em caso de erro
+      refetchToday();
     }
   });
 
@@ -884,9 +894,16 @@ export default function BarberDashboard() {
           <PaymentModal
             appt={payAppt}
             onClose={() => setPayAppt(null)}
-            onPaid={() => {
-              refetchToday();
+            onPaid={(paidApptId, method) => {
+              // Optimistic update: atualiza cache localmente sem esperar refetch
+              queryClient.setQueryData(['barber-today', barber?.id], (old = []) =>
+                old.map(a => a.id === paidApptId
+                  ? { ...a, payment_status: 'paid', payment_method: method, status: 'completed' }
+                  : a
+                )
+              );
               queryClient.invalidateQueries({ queryKey: ['barber-month'] });
+              refetchToday();
             }}
           />
         )}
