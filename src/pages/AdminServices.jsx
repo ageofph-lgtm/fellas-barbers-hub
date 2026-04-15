@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import BarberLoader from '../components/ui/BarberLoader';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
