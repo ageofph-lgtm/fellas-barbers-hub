@@ -69,10 +69,16 @@ function GeoScreen({ onResult }) {
 }
 
 // ── Client Profile ────────────────────────────────────────────────────────────
-function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName }) {
+function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName, onFavoriteShop }) {
   const favShop   = shops.find(s => s.id === prefs.favoriteShopId);
-  const favBarber = allBarbers.find(b => b.id === prefs.favoriteBarberRelId);
   const name      = prefs.clientName || '';
+
+  // Ordenar: favorita sempre primeiro
+  const sortedShops = [...shops].sort((a, b) => {
+    if (a.id === prefs.favoriteShopId) return -1;
+    if (b.id === prefs.favoriteShopId) return 1;
+    return 0;
+  });
 
   return (
     <div className="space-y-5">
@@ -92,52 +98,85 @@ function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName }) {
         </div>
       </div>
 
-      {/* Favoritos */}
-      {(favShop || favBarber) && (
-        <div className="space-y-2">
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Os teus favoritos</p>
+      {/* Todas as lojas — favorita destacada */}
+      <div className="space-y-2">
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Escolhe a loja</p>
 
-          {favShop && (
-            <motion.button whileTap={{ scale: 0.98 }} onClick={() => onBook({ skipToShop: favShop })}
-              className="w-full flex items-center gap-3 p-4 rounded-2xl text-left transition-all"
-              style={{ border: `1px solid rgba(200,16,46,0.35)`, background: 'rgba(200,16,46,0.06)' }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ background: 'rgba(200,16,46,0.15)' }}>
-                <Heart className="w-5 h-5 fill-current" style={{ color: RED }} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-muted-foreground">Loja favorita</p>
-                <p className="font-bold text-foreground text-sm truncate">{favShop.name}</p>
-              </div>
-              <ChevronRight className="w-4 h-4" style={{ color: RED }} />
-            </motion.button>
-          )}
-
-          {favBarber && (
-            <motion.button whileTap={{ scale: 0.98 }} onClick={() => onBook({ skipToBarber: favBarber })}
-              className="w-full flex items-center gap-3 p-4 rounded-2xl text-left transition-all border border-border bg-card hover:border-zinc-600">
-              {favBarber.photo_url
-                ? <img src={favBarber.photo_url} alt={favBarber.name} className="w-10 h-10 rounded-xl object-cover flex-shrink-0" />
-                : <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0"><Scissors className="w-4 h-4 text-muted-foreground" /></div>
-              }
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-muted-foreground">Barbeiro favorito</p>
-                <p className="font-bold text-foreground text-sm truncate">{favBarber.name}</p>
-              </div>
-              {favBarber.rating > 0 && (
-                <span className="text-xs font-bold" style={{ color: RED }}>★ {favBarber.rating?.toFixed(1)}</span>
+        {sortedShops.map((shop, i) => {
+          const isFav = shop.id === prefs.favoriteShopId;
+          return (
+            <motion.div
+              key={shop.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.06 }}
+              className="rounded-2xl overflow-hidden"
+              style={{
+                border: isFav ? `1.5px solid ${RED}` : '1px solid var(--border)',
+                background: isFav ? 'rgba(200,16,46,0.05)' : 'var(--card)',
+                boxShadow: isFav ? `0 4px 18px rgba(200,16,46,0.14)` : 'none',
+              }}
+            >
+              {/* Badge favorita */}
+              {isFav && (
+                <div className="flex items-center gap-1.5 px-4 pt-2.5 pb-0">
+                  <Heart className="w-3 h-3 fill-current" style={{ color: RED }} />
+                  <span className="text-[10px] font-black tracking-wider uppercase" style={{ color: RED }}>Loja Favorita</span>
+                </div>
               )}
-            </motion.button>
-          )}
-        </div>
-      )}
 
-      {/* CTA */}
+              <div className="flex items-center gap-3 p-4">
+                {/* Ícone / foto */}
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: isFav ? 'rgba(200,16,46,0.12)' : 'var(--secondary)' }}>
+                  {shop.photo_url
+                    ? <img src={shop.photo_url} alt={shop.name} className="w-full h-full object-cover rounded-xl" />
+                    : <MapPin className="w-5 h-5" style={{ color: isFav ? RED : 'var(--muted-foreground)' }} />
+                  }
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-foreground text-sm">{shop.name}</p>
+                  {shop.address && <p className="text-xs text-muted-foreground mt-0.5 truncate">{shop.address}</p>}
+                </div>
+
+                {/* Ações */}
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {/* Favoritar */}
+                  <button
+                    onClick={() => onFavoriteShop(shop)}
+                    className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors hover:bg-secondary"
+                    title={isFav ? 'Remover favorita' : 'Marcar como favorita'}
+                  >
+                    <Heart className="w-4 h-4 transition-all"
+                      style={{ color: isFav ? RED : 'var(--muted-foreground)', fill: isFav ? RED : 'transparent' }} />
+                  </button>
+                  {/* Agendar nesta loja */}
+                  <button
+                    onClick={() => onBook({ skipToShop: shop })}
+                    className="w-8 h-8 rounded-xl flex items-center justify-center transition-all"
+                    style={{
+                      background: isFav ? RED : 'var(--secondary)',
+                      color: isFav ? '#fff' : 'var(--muted-foreground)',
+                    }}
+                    title="Agendar nesta loja"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* CTA global */}
       <motion.button whileTap={{ scale: 0.98 }} onClick={() => onBook({})}
         className="w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all"
         style={{ background: RED, color: '#fff', boxShadow: '0 8px 24px rgba(200,16,46,0.25)' }}>
         <Scissors className="w-4 h-4" />
-        Marcar agendamento
+        Ver todas as unidades
       </motion.button>
 
       {/* Stats rápidas */}
@@ -154,7 +193,7 @@ function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName }) {
   );
 }
 
-// ── Name editor ───────────────────────────────────────────────────────────────
+
 function NameEditor({ initialName, onSave }) {
   const [val, setVal] = useState(initialName || '');
   return (
@@ -378,7 +417,7 @@ export default function Booking() {
           >
             {currentStep === 'geo'     && <GeoScreen onResult={loc => { setUserLocation(loc); setStep(1); }} />}
             {currentStep === 'profile' && !editingName && (
-              <ClientProfile prefs={prefs} shops={shops} allBarbers={allBarbers} onBook={startBooking} onEditName={() => setEditingName(true)} />
+              <ClientProfile prefs={prefs} shops={shops} allBarbers={allBarbers} onBook={startBooking} onEditName={() => setEditingName(true)} onFavoriteShop={shop => updatePrefs({ favoriteShopId: shop.id })} />
             )}
             {currentStep === 'profile' && editingName && (
               <NameEditor initialName={prefs.clientName}
