@@ -8,7 +8,7 @@ import { pt } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Calendar, TrendingUp, RefreshCw, Star, Euro, Clock, Loader2,
-  CheckCircle2, Scissors, User, BarChart3, Target, Award,
+  CheckCircle2, Scissors, User, Users, BarChart3, Target, Award,
   Heart, ChevronDown, Plus, QrCode, X, CreditCard,
   Banknote, Smartphone, Zap, Gift, Trophy, AlertTriangle
 } from 'lucide-react';
@@ -346,6 +346,239 @@ function WalkinModal({ barber, services, onClose, onCreated }) {
   );
 }
 
+// ── Main Dashboard ────────────────────────────────────────────────────────────
+export default function BarberDashboard() {
+  const { barberId: paramBarberId } = useParams();
+  const queryClient = useQueryClient();
+
+  // Session role
+  const sessionRole = (() => {
+    try { return JSON.parse(sessionStorage.getItem('fellas_role') || '{}'); } catch { return {}; }
+  })();
+  const barberId = paramBarberId || sessionRole.barberId;
+  const realBarberId = TEST_BARBER_MAP[barberId] || barberId;
+
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const monthStart = format(startOfMonth(new Date()), 'yyyy-MM-dd');
+
+  const [view, setView] = useState('agenda'); // 'agenda' | 'stats'
+  const [showWalkin, setShowWalkin] = useState(false);
+  const [payAppt, setPayAppt] = useState(null);
+  const [localAppts, setLocalAppts] = useState(null);
+
+  // Fetch barber profile
+  const { data: barber } = useQuery({
+    queryKey: ['barber', realBarberId],
+    queryFn: () => realBarberId ? base44.entities.Barber.filter({ id: realBarberId }).then(r => r[0]) : null,
+    enabled: !!realBarberId,
+  });
+
+  // Fetch today's appointments
+  const { data: appts = [], isLoading } = useQuery({
+    queryKey: ['barber-appts', realBarberId, today],
+    queryFn: () => base44.entities.Appointment.filter({ barber_id: realBarberId, date: today }),
+    enabled: !!realBarberId,
+    refetchInterval: 30000,
+  });
+
+  // Sync local appts from server
+  useEffect(() => { setLocalAppts(null); }, [appts]);
+  const displayAppts = localAppts ?? appts;
+
+  // Fetch monthly appointments for stats
+  const { data: monthAppts = [] } = useQuery({
+    queryKey: ['barber-month-appts', realBarberId, monthStart],
+    queryFn: () => base44.entities.Appointment.filter({ barber_id: realBarberId }),
+    enabled: !!realBarberId && view === 'stats',
+  });
+
+  // Fetch services for walk-in
+  const { data: allServices = [] } = useQuery({
+    queryKey: ['services'],
+    queryFn: () => base44.entities.Service.list(),
+  });
+
+  // Status change
+  const handleStatusChange = async (apptId, newStatus) => {
+    setLocalAppts(prev => (prev ?? displayAppts).map(a => a.id === apptId ? { ...a, status: newStatus } : a));
+    await base44.entities.Appointment.update(apptId, { status: newStatus });
+    queryClient.invalidateQueries({ queryKey: ['barber-appts'] });
+  };
+
+  // Payment registered
+  const handlePaid = (apptId, method) => {
+    setLocalAppts(prev => (prev ?? displayAppts).map(a =>
+      a.id === apptId ? { ...a, payment_status: 'paid', payment_method: method, status: 'completed' } : a
+    ));
+    queryClient.invalidateQueries({ queryKey: ['barber-appts'] });
+  };
+
+  // Monthly stats
+  const completedMonth = monthAppts.filter(a =>
+    a.status === 'completed' && a.date >= monthStart
+  );
+  const monthRevenue   = completedMonth.reduce((s, a) => s + (a.total_price || 0), 0);
+  const monthClients   = completedMonth.length;
+  const commission     = monthRevenue * ((barber?.commission_percent || 40) / 100);
+  const goal           = barber?.monthly_goal || 0;
+  const goalPct        = goal > 0 ? Math.min((monthRevenue / goal) * 100, 100) : 0;
+  const tier           = getTier(monthClients);
+
+  // Today stats
+  const todayDone    = displayAppts.filter(a => a.status === 'completed').length;
+  const todayRevenue = displayAppts.filter(a => a.status === 'completed').reduce((s, a) => s + (a.total_price || 0), 0);
+  const todayPending = displayAppts.filter(a => ['scheduled','confirmed','in_progress'].includes(a.status)).length;
+
+  const sorted = [...displayAppts].sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
+
+  return (
+    <div className="min-h-screen bg-background pb-24">
+      {/* Header */}
+      <div className="sticky top-0 z-10 border-b border-border px-4 py-3"
+        style={{ background: 'var(--background)' }}>
+        <div className="flex items-center justify-between max-w-lg mx-auto">
+          <div>
+            <p className="text-xs text-muted-foreground">{format(new Date(), 'EEEE, d MMM', { locale: pt })}</p>
+            <h1 className="font-black text-foreground text-lg leading-tight">
+              {barber?.name || sessionRole.barberName || 'Barbeiro'}
+            </h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowWalkin(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-white"
+              style={{ background: RED, boxShadow: '0 4px 12px rgba(200,16,46,0.3)' }}>
+              <Plus className="w-3.5 h-3.5" /> Walk-in
+            </button>
+            <button onClick={() => queryClient.invalidateQueries({ queryKey: ['barber-appts'] })}
+              className="w-9 h-9 rounded-xl flex items-center justify-center bg-secondary">
+              <RefreshCw className="w-4 h-4 text-muted-foreground" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-lg mx-auto px-4 py-4 space-y-4">
+        {/* View toggle */}
+        <div className="flex gap-2 bg-secondary rounded-2xl p-1">
+          {[['agenda', 'Agenda'], ['stats', 'Estatísticas']].map(([v, label]) => (
+            <button key={v} onClick={() => setView(v)}
+              className="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
+              style={{
+                background: view === v ? RED : 'transparent',
+                color: view === v ? '#fff' : 'var(--muted-foreground)',
+              }}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Agenda view ── */}
+        {view === 'agenda' && (
+          <>
+            {/* Today KPIs */}
+            <div className="grid grid-cols-3 gap-3">
+              <KpiCard icon={CheckCircle2} label="Concluídos" value={todayDone} highlight />
+              <KpiCard icon={Euro}         label="Receita"    value={`€${todayRevenue.toFixed(0)}`} />
+              <KpiCard icon={Calendar}     label="Pendentes"  value={todayPending} />
+            </div>
+
+            {/* Appointments */}
+            {isLoading ? (
+              <div className="flex justify-center py-12">
+                <BarberLoader />
+              </div>
+            ) : sorted.length === 0 ? (
+              <div className="text-center py-12 space-y-2">
+                <Scissors className="w-10 h-10 text-muted-foreground mx-auto" />
+                <p className="text-muted-foreground text-sm">Sem agendamentos para hoje</p>
+                <button onClick={() => setShowWalkin(true)}
+                  className="text-xs font-bold px-4 py-2 rounded-xl"
+                  style={{ color: RED, background: 'rgba(200,16,46,0.08)' }}>
+                  + Adicionar walk-in
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <AnimatePresence>
+                  {sorted.map(appt => (
+                    <AppointmentCard key={appt.id} appt={appt}
+                      onStatusChange={handleStatusChange}
+                      onPayment={(a) => setPayAppt(a)} />
+                  ))}
+                </AnimatePresence>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ── Stats view ── */}
+        {view === 'stats' && (
+          <div className="space-y-4">
+            {/* Tier badge */}
+            <div className="rounded-2xl p-4 border border-border bg-card flex items-center gap-4">
+              <span className="text-4xl">{tier.icon}</span>
+              <div className="flex-1">
+                <p className="font-black text-foreground">{tier.label}</p>
+                <p className="text-xs text-muted-foreground">Bónus de comissão: {tier.bonus}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-black text-foreground">{monthClients}</p>
+                <p className="text-xs text-muted-foreground">cortes/mês</p>
+              </div>
+            </div>
+
+            {/* Monthly KPIs */}
+            <div className="grid grid-cols-2 gap-3">
+              <KpiCard icon={Euro}    label="Receita Mensal"  value={`€${monthRevenue.toFixed(0)}`} highlight />
+              <KpiCard icon={Award}   label="Comissão"        value={`€${commission.toFixed(0)}`} />
+              <KpiCard icon={Users}   label="Clientes/mês"    value={monthClients} />
+              <KpiCard icon={Target}  label="Meta"            value={goal > 0 ? `€${goal}` : '—'} />
+            </div>
+
+            {/* Goal progress */}
+            {goal > 0 && (
+              <div className="rounded-2xl p-4 border border-border bg-card space-y-3">
+                <div className="flex justify-between items-center">
+                  <p className="text-sm font-bold text-foreground">Progresso da Meta</p>
+                  <p className="text-sm font-black" style={{ color: RED }}>{goalPct.toFixed(0)}%</p>
+                </div>
+                <div className="h-3 rounded-full bg-secondary overflow-hidden">
+                  <motion.div className="h-full rounded-full"
+                    style={{ background: RED, width: `${goalPct}%` }}
+                    initial={{ width: 0 }} animate={{ width: `${goalPct}%` }}
+                    transition={{ duration: 1, ease: 'easeOut' }} />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  €{monthRevenue.toFixed(0)} de €{goal} · falta €{Math.max(0, goal - monthRevenue).toFixed(0)}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Modals */}
+      <AnimatePresence>
+        {showWalkin && (
+          <WalkinModal
+            barber={barber || {}}
+            services={allServices}
+            onClose={() => setShowWalkin(false)}
+            onCreated={() => queryClient.invalidateQueries({ queryKey: ['barber-appts'] })}
+          />
+        )}
+        {payAppt && (
+          <PaymentModal
+            appt={payAppt}
+            onClose={() => setPayAppt(null)}
+            onPaid={handlePaid}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 // ── Payment Modal ─────────────────────────────────────────────────────────────
 function PaymentModal({ appt, onClose, onPaid }) {
   const [method, setMethod] = useState('cash');
@@ -504,5 +737,3 @@ function PaymentModal({ appt, onClose, onPaid }) {
     </div>
   );
 }
-
-
