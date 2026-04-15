@@ -82,47 +82,83 @@ function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName, onFavorit
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   }
 
-  // ── Horário por dia ──────────────────────────────────────────────────────
-  function getHoursForDay(shop, dayIndex) {
-    // dayIndex: 0=Dom,1=Seg..6=Sab
-    if (dayIndex === 0) return shop.hours_sunday || 'Fechado';
-    if (dayIndex === 6) return shop.hours_saturday || shop.hours_weekday || 'Fechado';
-    return shop.hours_weekday || 'Fechado';
+  // ── Dados estáticos das lojas (fallback para horários) ─────────────────
+  const STATIC_SHOPS = {
+    'Alameda':      { lat: 38.7318, lon: -9.1353, weekday: '10:00–19:00', saturday: '10:00–17:00', sunday: null },
+    'Campo Grande': { lat: 38.7573, lon: -9.1538, weekday: '10:00–20:00', saturday: '10:00–18:00', sunday: null },
+    'Almada':       { lat: 38.6769, lon: -9.1717, weekday: '10:00–20:00', saturday: '10:00–18:00', sunday: null },
+  };
+
+  function getStaticData(shop) {
+    for (const [key, val] of Object.entries(STATIC_SHOPS)) {
+      if (shop.name?.includes(key)) return val;
+    }
+    return null;
   }
 
-  function isOpenByHours(hours) {
-    if (!hours || hours.toLowerCase().includes('fechado')) return false;
-    const match = hours.match(/(\d{1,2})[h:](\d{0,2})\s*[-–]\s*(\d{1,2})[h:](\d{0,2})/);
-    if (!match) return false;
-    const now = new Date();
-    const cur = now.getHours() * 60 + (parseInt(now.getMinutes()) || 0);
-    const open  = parseInt(match[1]) * 60 + (parseInt(match[2]) || 0);
-    const close = parseInt(match[3]) * 60 + (parseInt(match[4]) || 0);
-    return cur >= open && cur < close;
+  // ── Horário por dia ──────────────────────────────────────────────────────
+  function getHoursForDay(shop, dayIndex) {
+    const st = getStaticData(shop);
+    // Domingo
+    if (dayIndex === 0) {
+      const h = shop.hours_sunday || (st?.sunday ? st.sunday : null);
+      return h || null; // null = fechado
+    }
+    // Sábado
+    if (dayIndex === 6) {
+      const raw = shop.hours_saturday || st?.saturday || null;
+      return raw || null;
+    }
+    // Seg-Sex
+    return shop.hours_weekday || st?.weekday || null;
+  }
+
+  function parseHours(hours) {
+    if (!hours) return null;
+    const m = hours.match(/(\d{1,2})[h:](\d{0,2})\s*[-–—]\s*(\d{1,2})[h:](\d{0,2})/);
+    if (!m) return null;
+    return {
+      open:  parseInt(m[1]) * 60 + (parseInt(m[2]) || 0),
+      close: parseInt(m[3]) * 60 + (parseInt(m[4]) || 0),
+      label: hours.replace(/\s/g, '').replace('–','-').replace('—','-'),
+    };
   }
 
   function isOpenNow(shop) {
-    return isOpenByHours(getHoursForDay(shop, new Date().getDay()));
+    const hours = getHoursForDay(shop, new Date().getDay());
+    if (!hours) return false;
+    const parsed = parseHours(hours);
+    if (!parsed) return false;
+    const now = new Date();
+    const cur = now.getHours() * 60 + now.getMinutes();
+    return cur >= parsed.open && cur < parsed.close;
   }
 
-  // ── Next 3 days schedule (hoje + amanhã + depois) ────────────────────────
+  // ── Next 3 days schedule ─────────────────────────────────────────────────
   function getNextDays(shop) {
     const today = new Date();
-    const days = [];
     const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-    for (let i = 0; i < 3; i++) {
+    return [0, 1, 2].map(i => {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
       const idx = d.getDay();
       const hours = getHoursForDay(shop, idx);
-      days.push({
+      const parsed = hours ? parseHours(hours) : null;
+      return {
         label: i === 0 ? 'Hoje' : i === 1 ? 'Amanhã' : dayNames[idx],
-        hours: hours === 'Fechado' ? 'Fechado' : hours,
+        hours: parsed ? parsed.label : null,
         isToday: i === 0,
-        isClosed: !hours || hours.toLowerCase().includes('fechado'),
-      });
-    }
-    return days;
+        isClosed: !parsed,
+      };
+    });
+  }
+
+  // ── Distância com fallback para coords estáticas ─────────────────────────
+  function getShopCoords(shop) {
+    const st = getStaticData(shop);
+    const lat = parseFloat(shop.lat) || st?.lat || null;
+    const lon = parseFloat(shop.lon) || st?.lon || null;
+    return { lat, lon };
   }
 
   // ── Ordenar lojas ────────────────────────────────────────────────────────
@@ -131,10 +167,13 @@ function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName, onFavorit
     const bFav = b.id === prefs.favoriteShopId;
     if (aFav && !bFav) return -1;
     if (!aFav && bFav) return 1;
-    if (userLocation && a.lat && b.lat) {
-      const dA = calcDist(userLocation.lat, userLocation.lon, parseFloat(a.lat), parseFloat(a.lon));
-      const dB = calcDist(userLocation.lat, userLocation.lon, parseFloat(b.lat), parseFloat(b.lon));
-      if (dA !== null && dB !== null) return dA - dB;
+    if (userLocation) {
+      const cA = getShopCoords(a), cB = getShopCoords(b);
+      if (cA.lat && cB.lat) {
+        const dA = calcDist(userLocation.lat, userLocation.lon, cA.lat, cA.lon);
+        const dB = calcDist(userLocation.lat, userLocation.lon, cB.lat, cB.lon);
+        if (dA !== null && dB !== null) return dA - dB;
+      }
     }
     return 0;
   });
@@ -172,10 +211,11 @@ function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName, onFavorit
         {sortedShops.map((shop, i) => {
           const isFav = shop.id === prefs.favoriteShopId;
           const open = isOpenNow(shop);
-          const todayHours = getHoursForDay(shop, new Date().getDay());
+          const todayHours = (() => { const h = getHoursForDay(shop, new Date().getDay()); return h ? parseHours(h)?.label || h : null; })();
           const nextDays = getNextDays(shop);
-          const dist = userLocation && shop.lat
-            ? calcDist(userLocation.lat, userLocation.lon, parseFloat(shop.lat), parseFloat(shop.lon))
+          const { lat: sLat, lon: sLon } = getShopCoords(shop);
+          const dist = userLocation && sLat
+            ? calcDist(userLocation.lat, userLocation.lon, sLat, sLon)
             : null;
 
           return (
