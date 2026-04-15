@@ -32,13 +32,13 @@ const STATUS_CONFIG = {
 function KpiCard({ icon: Icon, label, value, sub, highlight }) {
   return (
     <div className={`rounded-2xl p-4 border ${highlight
-      ? 'bg-[#C9A84C]/10 border-[#C9A84C]/30'
+      ? 'bg-[#C8102E]/10 border-[#C8102E]/30'
       : 'bg-card border-border'}`}
     >
       <div className="w-8 h-8 rounded-xl flex items-center justify-center mb-3 bg-black/30">
-        <Icon className={`w-4 h-4 ${highlight ? 'text-[#C9A84C]' : 'text-muted-foreground'}`} />
+        <Icon className={`w-4 h-4 ${highlight ? 'text-[#C8102E]' : 'text-muted-foreground'}`} />
       </div>
-      <p className={`text-2xl font-black ${highlight ? 'text-[#C9A84C]' : 'text-foreground'}`}>{value}</p>
+      <p className={`text-2xl font-black ${highlight ? 'text-[#C8102E]' : 'text-foreground'}`}>{value}</p>
       <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
       {sub && <p className="text-[11px] text-zinc-600 mt-1">{sub}</p>}
     </div>
@@ -81,7 +81,7 @@ function AppointmentCard({ appt, onStatusChange }) {
       {(appt.status === 'scheduled' || appt.status === 'confirmed') && (
         <div className="flex gap-2">
           <button onClick={() => onStatusChange(appt.id, 'in_progress')}
-            className="flex-1 text-xs font-semibold py-2 rounded-xl bg-[#C9A84C]/15 text-[#C9A84C] border border-[#C9A84C]/30 hover:bg-[#C9A84C]/25 transition-colors"
+            className="flex-1 text-xs font-semibold py-2 rounded-xl bg-[#C8102E]/15 text-[#C8102E] border border-[#C8102E]/30 hover:bg-[#C8102E]/25 transition-colors"
           >Iniciar</button>
           <button onClick={() => onStatusChange(appt.id, 'no_show')}
             className="px-3 text-xs font-semibold py-2 rounded-xl bg-secondary text-muted-foreground hover:text-red-400 transition-colors"
@@ -112,15 +112,22 @@ export default function BarberDashboard() {
     const load = async () => {
       setLoading(true);
       try {
-        // Resolver ID: pode ser fake (b1/b2/b3) ou ID real
+        // Prioridade 1: ID da URL (pode ser fake b1/b2/b3 ou ID real)
         const realId = TEST_BARBER_MAP[rawId] || rawId;
         if (realId) {
           const list = await base44.entities.Barber.filter({ id: realId });
           if (list.length > 0) { setBarber(list[0]); setLoading(false); return; }
         }
-        // Fallback: primeiro barbeiro disponível
-        const all = await base44.entities.Barber.filter({ is_active: true });
-        if (all.length > 0) setBarber(all[0]);
+        // Prioridade 2: sessão guardada (barbeiro entrou pelo RoleSelector)
+        try {
+          const session = JSON.parse(sessionStorage.getItem('fellas_session') || 'null');
+          if (session?.role === 'barber' && session?.barberId) {
+            const sessionRealId = TEST_BARBER_MAP[session.barberId] || session.barberId;
+            const list = await base44.entities.Barber.filter({ id: sessionRealId });
+            if (list.length > 0) { setBarber(list[0]); setLoading(false); return; }
+          }
+        } catch {}
+        // Sem fallback: se não encontrou, mostra erro — cada barbeiro tem a SUA conta
       } catch (e) { console.error(e); }
       setLoading(false);
     };
@@ -151,7 +158,7 @@ export default function BarberDashboard() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[#C9A84C]/30 border-t-[#C9A84C] rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-[#C8102E]/30 border-t-[#C8102E] rounded-full animate-spin" />
       </div>
     );
   }
@@ -202,9 +209,9 @@ export default function BarberDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 bg-[#C9A84C]/10 border border-[#C9A84C]/30 rounded-xl px-2.5 py-1.5">
-              <Star className="w-3.5 h-3.5 text-[#C9A84C] fill-current" />
-              <span className="text-sm font-bold text-[#C9A84C]">{(barber.rating || 0).toFixed(1)}</span>
+            <div className="flex items-center gap-1 bg-[#C8102E]/10 border border-[#C8102E]/30 rounded-xl px-2.5 py-1.5">
+              <Star className="w-3.5 h-3.5 text-[#C8102E] fill-current" />
+              <span className="text-sm font-bold text-[#C8102E]">{(barber.rating || 0).toFixed(1)}</span>
             </div>
             <button
               onClick={() => { refetchToday(); queryClient.invalidateQueries({ queryKey: ['barber-month'] }); }}
@@ -244,14 +251,14 @@ export default function BarberDashboard() {
               <div className="bg-card border border-border rounded-2xl p-4">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <Target className="w-4 h-4 text-[#C9A84C]" />
+                    <Target className="w-4 h-4 text-[#C8102E]" />
                     <span className="text-sm font-semibold text-foreground">Meta mensal</span>
                   </div>
-                  <span className="text-sm font-bold text-[#C9A84C]">{goalProgress.toFixed(0)}%</span>
+                  <span className="text-sm font-bold text-[#C8102E]">{goalProgress.toFixed(0)}%</span>
                 </div>
                 <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
                   <motion.div
-                    className="h-full bg-gradient-to-r from-[#C9A84C] to-[#f0d080] rounded-full"
+                    className="h-full bg-gradient-to-r from-[#C8102E] to-[#f0d080] rounded-full"
                     initial={{ width: 0 }}
                     animate={{ width: `${goalProgress}%` }}
                     transition={{ duration: 0.8, ease: 'easeOut' }}
@@ -308,12 +315,12 @@ export default function BarberDashboard() {
                   <div>
                     <p className="font-bold text-foreground">{barber.name}</p>
                     <p className="text-xs text-muted-foreground">{barber.years_experience || 0} anos de experiência</p>
-                    <p className="text-xs text-[#C9A84C] mt-0.5">Comissão: {barber.commission_percent}%</p>
+                    <p className="text-xs text-[#C8102E] mt-0.5">Comissão: {barber.commission_percent}%</p>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {(barber.specialties || []).map(s => (
-                    <span key={s} className="text-[11px] px-2.5 py-1 rounded-full bg-[#C9A84C]/10 text-[#C9A84C] border border-[#C9A84C]/20">
+                    <span key={s} className="text-[11px] px-2.5 py-1 rounded-full bg-[#C8102E]/10 text-[#C8102E] border border-[#C8102E]/20">
                       {s}
                     </span>
                   ))}
