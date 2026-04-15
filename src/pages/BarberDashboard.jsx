@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import BarberLoader from '../components/ui/BarberLoader';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
@@ -557,11 +558,7 @@ export default function BarberDashboard() {
     { key: 'rewards',   label: 'Recompensas',icon: Trophy    },
   ];
 
-  if (loading) return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-[#C8102E]/30 border-t-[#C8102E] rounded-full animate-spin" />
-    </div>
-  );
+  if (loading) return <BarberLoader fullscreen size="lg" label="A carregar..." />;
 
   if (!barber) return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
