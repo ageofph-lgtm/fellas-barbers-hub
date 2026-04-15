@@ -3,7 +3,7 @@ import BarberLoader from '../components/ui/BarberLoader';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Home, Heart, Star, ChevronRight, Navigation, Loader2, Scissors, User, MapPin } from 'lucide-react';
+import { ArrowLeft, Home, Heart, Star, ChevronRight, Navigation, Loader2, Scissors, User, MapPin, Clock } from 'lucide-react';
 import ServiceSelector from '../components/booking/ServiceSelector';
 import BarberSelector from '../components/booking/BarberSelector';
 import TimeSlotPicker from '../components/booking/TimeSlotPicker';
