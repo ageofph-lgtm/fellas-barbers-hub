@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import BarberLoader from '../components/ui/BarberLoader';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
@@ -373,7 +373,8 @@ export default function BarberDashboard() {
     enabled: !!realBarberId,
   });
 
-  // Fetch today's appointments
+  // Fetch today's appointments — refetch a cada 30s mas não sobrescreve updates locais
+  const skipNextSyncRef = useRef(false);
   const { data: appts = [], isLoading } = useQuery({
     queryKey: ['barber-appts', realBarberId, today],
     queryFn: () => base44.entities.Appointment.filter({ barber_id: realBarberId, date: today }),
@@ -381,8 +382,14 @@ export default function BarberDashboard() {
     refetchInterval: 30000,
   });
 
-  // Sync local appts from server
-  useEffect(() => { setLocalAppts(null); }, [appts]);
+  // Só sincroniza com server quando NÃO foi um update local que triggou
+  useEffect(() => {
+    if (skipNextSyncRef.current) {
+      skipNextSyncRef.current = false;
+      return;
+    }
+    setLocalAppts(null);
+  }, [appts]);
   const displayAppts = localAppts ?? appts;
 
   // Fetch monthly appointments for stats
@@ -398,19 +405,28 @@ export default function BarberDashboard() {
     queryFn: () => base44.entities.Service.list(),
   });
 
-  // Status change
+  // Status change — optimistic update imediato
   const handleStatusChange = async (apptId, newStatus) => {
     setLocalAppts(prev => (prev ?? displayAppts).map(a => a.id === apptId ? { ...a, status: newStatus } : a));
-    await base44.entities.Appointment.update(apptId, { status: newStatus });
-    queryClient.invalidateQueries({ queryKey: ['barber-appts'] });
+    try {
+      await base44.entities.Appointment.update(apptId, { status: newStatus });
+    } catch (e) {
+      console.error(e);
+      setLocalAppts(null); // reverter em erro
+    }
+    // Background sync após 5s — server já processou
+    skipNextSyncRef.current = true;
+    setTimeout(() => queryClient.invalidateQueries({ queryKey: ['barber-appts'] }), 5000);
   };
 
-  // Payment registered
+  // Payment registered — optimistic update, sync em background
   const handlePaid = (apptId, method) => {
     setLocalAppts(prev => (prev ?? displayAppts).map(a =>
       a.id === apptId ? { ...a, payment_status: 'paid', payment_method: method, status: 'completed' } : a
     ));
-    queryClient.invalidateQueries({ queryKey: ['barber-appts'] });
+    // Background sync após 5s para não sobrescrever o optimistic update
+    skipNextSyncRef.current = true;
+    setTimeout(() => queryClient.invalidateQueries({ queryKey: ['barber-appts'] }), 5000);
   };
 
   // Monthly stats
@@ -432,7 +448,7 @@ export default function BarberDashboard() {
   const sorted = [...displayAppts].sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-32">
       {/* Header */}
       <div className="sticky top-0 z-10 border-b border-border px-4 py-3"
         style={{ background: 'var(--background)' }}>
