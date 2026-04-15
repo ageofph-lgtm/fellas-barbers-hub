@@ -515,8 +515,8 @@ export default function Booking() {
                 onFavorite={b => updatePrefs({ favoriteBarberRelId: b.id })} />
             )}
             {currentStep === 'time' && (
-              <TimeSlotPicker appointments={appointments} totalDuration={totalDuration}
-                shopHours={selectedShop?.opening_hours} selectedSlot={selectedSlot}
+              <TimeSlotPicker shop={selectedShop} appointments={appointments} totalDuration={totalDuration}
+                selectedSlot={selectedSlot}
                 onSelect={slot => { setSelectedSlot(slot); setStep(5); }} />
             )}
             {currentStep === 'confirm' && (
