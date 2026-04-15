@@ -386,7 +386,8 @@ export default function Booking() {
             )}
             {currentStep === 'shop' && (
               <ShopSelector shops={shops} userLocation={userLocation} favoriteShopId={prefs.favoriteShopId}
-                onSelect={shop => { setSelectedShop(shop); updatePrefs({ favoriteShopId: shop.id }); setStep(3); }} />
+                onSelect={shop => { setSelectedShop(shop); setStep(3); }}
+                onFavorite={shop => updatePrefs({ favoriteShopId: shop.id })} />
             )}
             {currentStep === 'services' && (
               <ServiceSelector services={services} selected={selectedServices} onToggle={toggleService}
