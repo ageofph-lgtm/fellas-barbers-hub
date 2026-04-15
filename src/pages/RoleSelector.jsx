@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, ArrowLeft, Crown, Sun, Moon } from 'lucide-react';
 import { setSessionRole } from '../components/layout/AppLayout';
-import { useTheme } from '../../App';
+import { useTheme } from '../App';
 
 const TEST_BARBERS = [
   { id: 'b1', name: 'Ricardo Silva',  shop: 'Alameda',      specialty: 'Fade · Degradê · Design',    photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face', rating: 4.9, years: 8 },
