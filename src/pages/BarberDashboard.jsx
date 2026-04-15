@@ -7,7 +7,7 @@ import { format, startOfMonth } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Calendar, TrendingUp, RefreshCw, Star, Euro, Clock,
+  Calendar, TrendingUp, RefreshCw, Star, Euro, Clock, Loader2,
   CheckCircle2, Scissors, User, BarChart3, Target, Award,
   Heart, ChevronDown, Plus, QrCode, X, CreditCard,
   Banknote, Smartphone, Zap, Gift, Trophy, AlertTriangle
