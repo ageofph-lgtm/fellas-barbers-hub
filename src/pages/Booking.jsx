@@ -556,7 +556,7 @@ export default function Booking() {
       </div>
 
       {/* Content */}
-      <div className="max-w-lg mx-auto px-4 py-5 pb-32">
+      <div className="max-w-lg mx-auto px-4 py-5 pb-6">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStep + (editingName ? '_edit' : '')}
@@ -573,7 +573,7 @@ export default function Booking() {
             )}
             {currentStep === 'services' && (
               <ServiceSelector services={services} selected={selectedServices} onToggle={toggleService}
-                total={total} totalDuration={totalDuration} />
+                total={total} totalDuration={totalDuration} onNext={() => setStep(3)} />
             )}
             {currentStep === 'barber' && (
               <BarberSelectorWithFav barbers={barbers} selected={selectedBarber}
@@ -598,17 +598,7 @@ export default function Booking() {
           </motion.div>
         </AnimatePresence>
 
-        {/* CTA fixo serviços */}
-        {currentStep === 'services' && selectedServices.length > 0 && (
-          <div className="fixed bottom-6 left-4 right-4 max-w-lg mx-auto z-40">
-            <motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-              onClick={() => setStep(3)}
-              className="w-full py-4 rounded-2xl font-bold text-sm transition-all"
-              style={{ background: RED, color: '#fff', boxShadow: `0 8px 24px rgba(200,16,46,0.3)` }}>
-              Continuar — {selectedServices.length} serviço{selectedServices.length > 1 ? 's' : ''} · €{total.toFixed(2)}
-            </motion.button>
-          </div>
-        )}
+
       </div>
     </div>
   );
