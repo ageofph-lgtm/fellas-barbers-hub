@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Home, Heart, Star, ChevronRight, Navigation, Loader2, Scissors, User } from 'lucide-react';
+import { ArrowLeft, Home, Heart, Star, ChevronRight, Navigation, Loader2, Scissors, User, MapPin } from 'lucide-react';
 import ShopSelector from '../components/booking/ShopSelector';
 import ServiceSelector from '../components/booking/ServiceSelector';
 import BarberSelector from '../components/booking/BarberSelector';
