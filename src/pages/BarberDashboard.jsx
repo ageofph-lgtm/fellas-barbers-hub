@@ -581,8 +581,16 @@ export default function BarberDashboard() {
 
   const { data: services = [] } = useQuery({
     queryKey: ['services', barber?.barbershop_id],
-    queryFn: () => base44.entities.Service.filter({ barbershop_id: barber.barbershop_id }),
-    enabled: !!barber?.barbershop_id,
+    queryFn: async () => {
+      // Se o barbeiro tem barbershop_id, filtra por loja; senão busca todos ativos
+      if (barber?.barbershop_id) {
+        const byShop = await base44.entities.Service.filter({ barbershop_id: barber.barbershop_id });
+        if (byShop.length > 0) return byShop;
+      }
+      // Fallback: todos os serviços ativos
+      return base44.entities.Service.filter({ is_active: true });
+    },
+    enabled: !!barber,
   });
 
   const { mutate: changeStatus } = useMutation({
