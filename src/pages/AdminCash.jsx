@@ -158,7 +158,7 @@ function GlobalOverview({ shops, allAppointments, allReports }) {
         );
       })()}
 
-      {/* Por unidade */}}
+      {/* Por unidade */}
       <div className="rounded-2xl border border-border bg-card overflow-hidden">
         <div className="p-4 border-b border-border">
           <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
