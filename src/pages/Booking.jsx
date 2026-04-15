@@ -72,108 +72,66 @@ function GeoScreen({ onResult }) {
 function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName, onFavoriteShop, userLocation }) {
   const name = prefs.clientName || '';
 
-  // ── Haversine distance ───────────────────────────────────────────────────
-  function calcDist(lat1, lon1, lat2, lon2) {
-    if (!lat1 || !lat2) return null;
-    const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  }
-
-  // ── Dados estáticos das lojas (fallback para horários) ─────────────────
-  const STATIC_SHOPS = {
-    'Alameda':      { lat: 38.7318, lon: -9.1353, weekday: '10:00–19:00', saturday: '10:00–17:00', sunday: null },
-    'Campo Grande': { lat: 38.7573, lon: -9.1538, weekday: '10:00–20:00', saturday: '10:00–18:00', sunday: null },
-    'Almada':       { lat: 38.6769, lon: -9.1717, weekday: '10:00–20:00', saturday: '10:00–18:00', sunday: null },
+  // ── Static shop data (coords + hours fallback) ───────────────────────────
+  const STATIC = {
+    'Alameda':      { lat: 38.7318, lon: -9.1353, wd: '10:00-19:00', sat: '10:00-17:00', sun: null },
+    'Campo Grande': { lat: 38.7573, lon: -9.1538, wd: '10:00-20:00', sat: '10:00-18:00', sun: null },
+    'Almada':       { lat: 38.6769, lon: -9.1717, wd: '10:00-20:00', sat: '10:00-18:00', sun: null },
   };
-
-  function getStaticData(shop) {
-    for (const [key, val] of Object.entries(STATIC_SHOPS)) {
-      if (shop.name?.includes(key)) return val;
+  function getStatic(shop) {
+    for (const [k, v] of Object.entries(STATIC)) {
+      if (shop.name?.includes(k)) return v;
     }
     return null;
   }
-
-  // ── Horário por dia ──────────────────────────────────────────────────────
-  function getHoursForDay(shop, dayIndex) {
-    const st = getStaticData(shop);
-    // Domingo
-    if (dayIndex === 0) {
-      const h = shop.hours_sunday || (st?.sunday ? st.sunday : null);
-      return h || null; // null = fechado
-    }
-    // Sábado
-    if (dayIndex === 6) {
-      const raw = shop.hours_saturday || st?.saturday || null;
-      return raw || null;
-    }
-    // Seg-Sex
-    return shop.hours_weekday || st?.weekday || null;
+  function getCoords(shop) {
+    const st = getStatic(shop);
+    return { lat: parseFloat(shop.lat) || st?.lat || null, lon: parseFloat(shop.lon) || st?.lon || null };
   }
-
-  function parseHours(hours) {
-    if (!hours) return null;
-    const m = hours.match(/(\d{1,2})[h:](\d{0,2})\s*[-–—]\s*(\d{1,2})[h:](\d{0,2})/);
+  function dist(la1, lo1, la2, lo2) {
+    if (!la1 || !la2) return null;
+    const R = 6371, dr = Math.PI/180;
+    const dLa = (la2-la1)*dr, dLo = (lo2-lo1)*dr;
+    const a = Math.sin(dLa/2)**2 + Math.cos(la1*dr)*Math.cos(la2*dr)*Math.sin(dLo/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+  function getHours(shop, dayIdx) {
+    const st = getStatic(shop);
+    if (dayIdx === 0) return shop.hours_sunday || st?.sun || null;
+    if (dayIdx === 6) return shop.hours_saturday || st?.sat || null;
+    return shop.hours_weekday || st?.wd || null;
+  }
+  function parseH(h) {
+    if (!h) return null;
+    const m = h.match(/(\d{1,2})[h:](\d{0,2})\s*[-–—]\s*(\d{1,2})[h:](\d{0,2})/);
     if (!m) return null;
-    return {
-      open:  parseInt(m[1]) * 60 + (parseInt(m[2]) || 0),
-      close: parseInt(m[3]) * 60 + (parseInt(m[4]) || 0),
-      label: hours.replace(/\s/g, '').replace('–','-').replace('—','-'),
-    };
+    const label = h.replace(/\s/g,'').replace(/[–—]/,'-');
+    return { open: +m[1]*60+(+m[2]||0), close: +m[3]*60+(+m[4]||0), label };
   }
-
-  function isOpenNow(shop) {
-    const hours = getHoursForDay(shop, new Date().getDay());
-    if (!hours) return false;
-    const parsed = parseHours(hours);
-    if (!parsed) return false;
-    const now = new Date();
-    const cur = now.getHours() * 60 + now.getMinutes();
-    return cur >= parsed.open && cur < parsed.close;
+  function isOpen(shop) {
+    const h = getHours(shop, new Date().getDay());
+    const p = parseH(h); if (!p) return false;
+    const c = new Date().getHours()*60+new Date().getMinutes();
+    return c >= p.open && c < p.close;
   }
-
-  // ── Next 3 days schedule ─────────────────────────────────────────────────
-  function getNextDays(shop) {
-    const today = new Date();
-    const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-    return [0, 1, 2].map(i => {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      const idx = d.getDay();
-      const hours = getHoursForDay(shop, idx);
-      const parsed = hours ? parseHours(hours) : null;
-      return {
-        label: i === 0 ? 'Hoje' : i === 1 ? 'Amanhã' : dayNames[idx],
-        hours: parsed ? parsed.label : null,
-        isToday: i === 0,
-        isClosed: !parsed,
-      };
+  function nextDays(shop) {
+    const DN = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+    return [0,1,2].map(i => {
+      const d = new Date(); d.setDate(d.getDate()+i);
+      const p = parseH(getHours(shop, d.getDay()));
+      return { label: i===0?'Hoje':i===1?'Amanhã':DN[d.getDay()], hours: p?.label||null };
     });
   }
 
-  // ── Distância com fallback para coords estáticas ─────────────────────────
-  function getShopCoords(shop) {
-    const st = getStaticData(shop);
-    const lat = parseFloat(shop.lat) || st?.lat || null;
-    const lon = parseFloat(shop.lon) || st?.lon || null;
-    return { lat, lon };
-  }
-
-  // ── Ordenar lojas ────────────────────────────────────────────────────────
-  const sortedShops = [...shops].sort((a, b) => {
-    const aFav = a.id === prefs.favoriteShopId;
-    const bFav = b.id === prefs.favoriteShopId;
-    if (aFav && !bFav) return -1;
-    if (!aFav && bFav) return 1;
+  // ── Sort: favorita primeiro, depois por distância ────────────────────────
+  const sorted = [...shops].sort((a,b) => {
+    if (a.id===prefs.favoriteShopId) return -1;
+    if (b.id===prefs.favoriteShopId) return 1;
     if (userLocation) {
-      const cA = getShopCoords(a), cB = getShopCoords(b);
-      if (cA.lat && cB.lat) {
-        const dA = calcDist(userLocation.lat, userLocation.lon, cA.lat, cA.lon);
-        const dB = calcDist(userLocation.lat, userLocation.lon, cB.lat, cB.lon);
-        if (dA !== null && dB !== null) return dA - dB;
-      }
+      const ca=getCoords(a), cb=getCoords(b);
+      const da=dist(userLocation.lat,userLocation.lon,ca.lat,ca.lon);
+      const db=dist(userLocation.lat,userLocation.lon,cb.lat,cb.lon);
+      if (da!==null&&db!==null) return da-db;
     }
     return 0;
   });
@@ -183,142 +141,121 @@ function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName, onFavorit
       {/* Greeting */}
       <div className="flex items-center gap-3 pt-1">
         <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
-          style={{ background: 'rgba(200,16,46,0.1)', border: `1px solid rgba(200,16,46,0.25)` }}>
+          style={{ background:'rgba(200,16,46,0.1)', border:'1px solid rgba(200,16,46,0.25)' }}>
           <User className="w-6 h-6" style={{ color: RED }} />
         </div>
         <div>
           <h2 className="text-lg font-black text-foreground">
             {name ? `Olá, ${name.split(' ')[0]}!` : 'Bem-vindo à Fellas!'}
           </h2>
-          <button onClick={onEditName} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+          <button onClick={onEditName} className="text-xs text-muted-foreground">
             {name ? 'Editar nome →' : 'Adicionar o teu nome →'}
           </button>
         </div>
       </div>
 
-      {/* Label + GPS indicator */}
+      {/* Label */}
       <div className="flex items-center justify-between">
         <p className="text-xs font-black text-muted-foreground uppercase tracking-wider">Escolhe a loja</p>
         {userLocation && (
-          <span className="text-[10px] font-bold flex items-center gap-1" style={{ color: '#22c55e' }}>
-            <Navigation className="w-3 h-3" /> Por distância
+          <span className="text-[10px] font-bold flex items-center gap-1" style={{ color:'#22c55e' }}>
+            <Navigation className="w-3 h-3"/> Por distância
           </span>
         )}
       </div>
 
-      {/* Cards das lojas */}
+      {/* Shop cards */}
       <div className="space-y-3">
-        {sortedShops.map((shop, i) => {
-          const isFav = shop.id === prefs.favoriteShopId;
-          const open = isOpenNow(shop);
-          const todayHours = (() => { const h = getHoursForDay(shop, new Date().getDay()); return h ? parseHours(h)?.label || h : null; })();
-          const nextDays = getNextDays(shop);
-          const { lat: sLat, lon: sLon } = getShopCoords(shop);
-          const dist = userLocation && sLat
-            ? calcDist(userLocation.lat, userLocation.lon, sLat, sLon)
+        {sorted.map((shop, i) => {
+          const fav = shop.id === prefs.favoriteShopId;
+          const open = isOpen(shop);
+          const days = nextDays(shop);
+          const coords = getCoords(shop);
+          const km = userLocation && coords.lat
+            ? dist(userLocation.lat, userLocation.lon, coords.lat, coords.lon)
             : null;
 
           return (
-            <motion.div
-              key={shop.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.06 }}
+            <motion.div key={shop.id}
+              initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }}
+              transition={{ delay: i*0.06 }}
               className="rounded-2xl overflow-hidden"
               style={{
-                border: isFav ? `1.5px solid ${RED}` : '1px solid var(--border)',
-                background: isFav ? 'rgba(200,16,46,0.04)' : 'var(--card)',
-                boxShadow: isFav ? `0 4px 20px rgba(200,16,46,0.12)` : 'none',
+                border: fav ? `2px solid ${RED}` : '1px solid var(--border)',
+                background: fav ? 'rgba(200,16,46,0.03)' : 'var(--card)',
               }}
             >
-              {/* Badge favorita */}
-              {isFav && (
-                <div className="flex items-center gap-1.5 px-4 pt-2.5 pb-0">
-                  <Heart className="w-3 h-3 fill-current" style={{ color: RED }} />
-                  <span className="text-[10px] font-black tracking-wider uppercase" style={{ color: RED }}>Loja Favorita</span>
+              {/* Fav badge */}
+              {fav && (
+                <div className="flex items-center gap-1.5 px-4 pt-2.5">
+                  <Heart className="w-3 h-3 fill-current" style={{ color:RED }} />
+                  <span className="text-[10px] font-black tracking-wider uppercase" style={{ color:RED }}>Favorita</span>
                 </div>
               )}
 
-              {/* Linha principal */}
-              <div className="flex items-center gap-3 px-4 pt-3 pb-2">
-                {/* Ícone */}
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: isFav ? 'rgba(200,16,46,0.12)' : 'var(--secondary)' }}>
+              {/* Main row */}
+              <div className="flex items-start gap-3 px-4 pt-3 pb-2">
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
+                  style={{ background: fav?'rgba(200,16,46,0.12)':'var(--secondary)' }}>
                   {shop.photo_url
-                    ? <img src={shop.photo_url} alt={shop.name} className="w-full h-full object-cover rounded-xl" />
-                    : <MapPin className="w-6 h-6" style={{ color: isFav ? RED : 'var(--muted-foreground)' }} />
+                    ? <img src={shop.photo_url} alt={shop.name} className="w-full h-full object-cover rounded-xl"/>
+                    : <MapPin className="w-5 h-5" style={{ color: fav?RED:'var(--muted-foreground)' }}/>
                   }
                 </div>
-
-                {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-foreground text-sm leading-tight">{shop.name}</p>
-                  {shop.address && <p className="text-xs text-muted-foreground mt-0.5 truncate">{shop.address}</p>}
-                  {/* Badge aberto + distância + horário hoje */}
-                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                    <span className="flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full"
+                  <p className="font-bold text-foreground text-sm">{shop.name}</p>
+                  {shop.address && <p className="text-xs text-muted-foreground truncate">{shop.address}</p>}
+                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                    {/* Aberto/Fechado */}
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
                       style={{
-                        background: open ? 'rgba(34,197,94,0.12)' : 'rgba(100,100,100,0.1)',
-                        color: open ? '#22c55e' : 'var(--muted-foreground)',
-                        border: open ? '1px solid rgba(34,197,94,0.25)' : '1px solid var(--border)',
+                        background: open?'rgba(34,197,94,0.1)':'rgba(100,100,100,0.08)',
+                        color: open?'#22c55e':'var(--muted-foreground)',
+                        border: open?'1px solid rgba(34,197,94,0.2)':'1px solid var(--border)',
                       }}>
-                      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                        style={{ background: open ? '#22c55e' : 'var(--muted-foreground)' }} />
-                      {open ? 'Aberto' : 'Fechado'}
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ background: open?'#22c55e':'var(--muted-foreground)' }}/>
+                      {open?'Aberto':'Fechado'}
                     </span>
-                    {dist !== null && (
-                      <span className="text-[11px] text-muted-foreground flex items-center gap-1 font-medium px-2 py-0.5 rounded-full"
-                        style={{ background: 'var(--secondary)', border: '1px solid var(--border)' }}>
-                        <Navigation className="w-3 h-3" />
-                        {dist < 1 ? `${Math.round(dist*1000)}m` : `${dist.toFixed(1)} km`}
-                      </span>
-                    )}
-                    {todayHours && todayHours !== 'Fechado' && (
-                      <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                        <Clock className="w-3 h-3" />{todayHours}
+                    {/* Distância */}
+                    {km !== null && (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-secondary border border-border text-muted-foreground">
+                        <Navigation className="w-3 h-3"/>
+                        {km<1?`${Math.round(km*1000)}m`:`${km.toFixed(1)} km`}
                       </span>
                     )}
                   </div>
                 </div>
-
-                {/* Ações */}
-                <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
-                  <button onClick={() => onFavoriteShop(shop)}
-                    className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-secondary transition-colors">
-                    <Heart className="w-4 h-4"
-                      style={{ color: isFav ? RED : 'var(--muted-foreground)', fill: isFav ? RED : 'transparent' }} />
-                  </button>
-                  <button onClick={() => onBook({ skipToShop: shop })}
-                    className="w-8 h-8 rounded-xl flex items-center justify-center transition-all"
-                    style={{ background: 'rgba(200,16,46,0.1)', color: RED, border: '1px solid rgba(200,16,46,0.25)' }}>
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
+                {/* Fav button */}
+                <button onClick={(e) => { e.stopPropagation(); onFavoriteShop(shop); }}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors"
+                  style={{ background:'var(--secondary)' }}>
+                  <Heart className="w-4 h-4" style={{ color:fav?RED:'var(--muted-foreground)', fill:fav?RED:'transparent' }}/>
+                </button>
               </div>
 
-              {/* Mini-grid horários: Hoje / Amanhã / Próximo dia */}
-              <div className="grid grid-cols-3 gap-1.5 px-4 pb-3">
-                {nextDays.map(({ label, hours, isToday, isClosed }) => (
-                  <div key={label} className="text-center rounded-xl py-1.5 px-1"
-                    style={{
-                      background: isToday
-                        ? isClosed ? 'rgba(100,100,100,0.08)' : 'rgba(200,16,46,0.08)'
-                        : 'var(--secondary)',
-                      border: isToday
-                        ? isClosed ? '1px solid rgba(100,100,100,0.15)' : `1px solid rgba(200,16,46,0.2)`
-                        : '1px solid var(--border)',
-                    }}>
-                    <p className="text-[10px] font-black uppercase tracking-wider"
-                      style={{ color: isToday && !isClosed ? RED : 'var(--muted-foreground)' }}>
-                      {label}
-                    </p>
-                    <p className="text-[11px] font-bold mt-0.5 leading-tight"
-                      style={{ color: isClosed ? 'var(--muted-foreground)' : 'var(--foreground)' }}>
-                      {isClosed ? '—' : hours}
+              {/* Horários próximos 3 dias */}
+              <div className="grid grid-cols-3 gap-1 px-4 pb-3">
+                {days.map(({ label, hours }) => (
+                  <div key={label} className="text-center rounded-xl py-1.5 px-1 bg-secondary/50">
+                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">{label}</p>
+                    <p className="text-[11px] font-semibold" style={{ color: hours?'var(--foreground)':'var(--muted-foreground)' }}>
+                      {hours || '—'}
                     </p>
                   </div>
                 ))}
               </div>
+
+              {/* ── CTA AGENDAR — largo, clicável, impossível de perder ── */}
+              <button
+                onClick={() => onBook({ skipToShop: shop })}
+                className="w-full py-3.5 font-black text-sm text-white transition-all"
+                style={{
+                  background: RED,
+                  boxShadow: fav ? '0 4px 16px rgba(200,16,46,0.3)' : 'none',
+                }}
+              >
+                Agendar nesta loja →
+              </button>
             </motion.div>
           );
         })}
@@ -326,13 +263,9 @@ function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName, onFavorit
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2 pt-1">
-        {[
-          [String(shops.length || '—'), 'Unidades'],
-          ['1000+', 'Reviews'],
-          ['4.9★', 'Rating'],
-        ].map(([v, l]) => (
+        {[[String(shops.length||'—'),'Unidades'],['1000+','Reviews'],['4.9★','Rating']].map(([v,l]) => (
           <div key={l} className="p-3 rounded-xl bg-card border border-border text-center">
-            <p className="text-base font-black" style={{ color: RED }}>{v}</p>
+            <p className="text-base font-black" style={{ color:RED }}>{v}</p>
             <p className="text-[11px] text-muted-foreground mt-0.5">{l}</p>
           </div>
         ))}
