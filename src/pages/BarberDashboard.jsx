@@ -359,12 +359,12 @@ function PaymentModal({ appt, onClose, onPaid }) {
       await base44.entities.Appointment.update(appt.id, {
         payment_method: method,
         payment_status: 'paid',
-        status: appt.status === 'in_progress' ? 'completed' : appt.status,
+        status: 'completed',
       });
       setPaid(true);
-      setTimeout(() => { onPaid(); onClose(); }, 1500);
-    } catch (e) { console.error(e); }
-    setLoading(false);
+      // Fechar e refrescar após animação
+      setTimeout(() => { onPaid(); onClose(); }, 1200);
+    } catch (e) { console.error(e); setLoading(false); }
   };
 
   const PAY_OPTS = [
@@ -475,7 +475,7 @@ function PaymentModal({ appt, onClose, onPaid }) {
 
 // ── Rewards Panel ─────────────────────────────────────────────────────────────
 function RewardsPanel({ completedMonth, barber }) {
-  const appCount  = completedMonth.filter(a => a.is_walkin || a.payment_status === 'paid').length;
+  const appCount  = completedMonth.length; // todos os cortes concluídos no mês
   const totalCount = completedMonth.length;
   const tier = getTier(appCount);
   const nextTier = REWARD_TIERS[REWARD_TIERS.indexOf(tier) + 1];
@@ -643,11 +643,19 @@ export default function BarberDashboard() {
   // KPIs
   const completedToday  = todayAppts.filter(a => a.status === 'completed');
   const pendingToday    = todayAppts.filter(a => ['scheduled','confirmed','in_progress'].includes(a.status));
-  const revenueToday    = completedToday.reduce((s, a) => s + (a.total_price || 0), 0);
+  // Receita hoje: todos completed com pagamento registado (inclui walk-ins)
+  const paidToday       = todayAppts.filter(a => a.payment_status === 'paid');
+  const revenueToday    = paidToday.reduce((s, a) => s + (a.total_price || 0), 0);
   const commissionToday = revenueToday * ((barber?.commission_percent || 40) / 100);
 
-  const thisMonth = startOfMonth(new Date()).toISOString();
-  const completedMonth  = monthAppts.filter(a => a.status === 'completed' && (a.created_date || '') >= thisMonth);
+  // Mês atual em formato YYYY-MM para comparar com campo date
+  const thisMonthStr = format(startOfMonth(new Date()), 'yyyy-MM');
+  const completedMonth = monthAppts.filter(a =>
+    a.status === 'completed' &&
+    ((a.date && a.date.startsWith(thisMonthStr)) ||
+     (a.scheduled_date && a.scheduled_date.startsWith(thisMonthStr)) ||
+     (a.created_date && a.created_date.startsWith(thisMonthStr.replace('-', '-'))))
+  );
   const revenueMonth    = completedMonth.reduce((s, a) => s + (a.total_price || 0), 0);
   const commissionMonth = revenueMonth * ((barber?.commission_percent || 40) / 100);
   const goalProgress    = barber?.monthly_goal ? Math.min(100, (commissionMonth / barber.monthly_goal) * 100) : 0;
@@ -728,7 +736,7 @@ export default function BarberDashboard() {
             <motion.div key="hoje" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <KpiCard icon={Euro} label="Faturado hoje" value={`€${revenueToday.toFixed(0)}`} sub={`Comissão: €${commissionToday.toFixed(0)}`} highlight />
-                <KpiCard icon={Calendar} label="Marcações" value={todayAppts.length} sub={`${completedToday.length} concluídas`} />
+                <KpiCard icon={Calendar} label="Cortes hoje" value={completedToday.length} sub={`${todayAppts.filter(a=>a.is_walkin).length} walk-ins`} />
               </div>
 
               {/* Meta mensal */}
