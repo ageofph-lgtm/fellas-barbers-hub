@@ -96,48 +96,41 @@ function AppointmentCard({ appt, onStatusChange, onPayment }) {
         </span>
       </div>
 
-      {/* Ações por estado */}
+      {/* ── Fluxo de ações: Iniciar → Concluir → Cobrar ──────────────── */}
+
+      {/* 1. Agendado ou confirmado → só Iniciar */}
       {(appt.status === 'scheduled' || appt.status === 'confirmed') && (
-        <div className="flex gap-2">
-          <button onClick={() => onStatusChange(appt.id, 'in_progress')}
-            className="flex-1 py-2.5 rounded-xl text-xs font-bold border border-yellow-500/40 text-yellow-400 bg-yellow-500/10 hover:bg-yellow-500/20 transition-colors">
-            ▶ Iniciar
-          </button>
-        </div>
+        <button onClick={() => onStatusChange(appt.id, 'in_progress')}
+          className="w-full py-2.5 rounded-xl text-xs font-bold border border-yellow-500/40 text-yellow-400 bg-yellow-500/10 hover:bg-yellow-500/20 transition-colors">
+          ▶ Iniciar corte
+        </button>
       )}
 
-      {appt.status === 'in_progress' && appt.payment_status !== 'paid' && (
-        <div className="flex gap-2">
-          <button onClick={() => onStatusChange(appt.id, 'completed')}
-            className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white transition-colors"
-            style={{ background: RED }}>
-            ✓ Concluir
-          </button>
-          <button onClick={() => onPayment(appt)}
-            className="py-2.5 px-4 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5"
-            style={{ borderColor: 'rgba(200,16,46,0.4)', color: RED, background: 'rgba(200,16,46,0.06)' }}
-            title="Cobrar">
-            <QrCode className="w-4 h-4" /> Cobrar
-          </button>
-        </div>
+      {/* 2. Em curso → só Concluir (pagamento só APÓS concluído) */}
+      {appt.status === 'in_progress' && (
+        <button onClick={() => onStatusChange(appt.id, 'completed')}
+          className="w-full py-2.5 rounded-xl text-xs font-bold text-white transition-colors"
+          style={{ background: RED, boxShadow: '0 4px 14px rgba(200,16,46,0.3)' }}>
+          ✓ Concluir corte
+        </button>
       )}
 
-      {/* Concluído mas não pago — só mostrar cobrar */}
+      {/* 3. Concluído e ainda não pago → Registar pagamento */}
       {appt.status === 'completed' && appt.payment_status !== 'paid' && (
-        <div className="flex gap-2">
-          <button onClick={() => onPayment(appt)}
-            className="w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all"
-            style={{ background: 'rgba(200,16,46,0.08)', borderColor: RED, border: `1px solid rgba(200,16,46,0.3)`, color: RED }}>
-            <QrCode className="w-4 h-4" /> Registar pagamento
-          </button>
-        </div>
+        <button onClick={() => onPayment(appt)}
+          className="w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all"
+          style={{ border: `1.5px solid rgba(200,16,46,0.4)`, color: RED, background: 'rgba(200,16,46,0.06)' }}>
+          <QrCode className="w-4 h-4" /> Registar pagamento
+        </button>
       )}
 
-      {/* Indicador pagamento */}
+      {/* 4. Pago → badge final (sem mais botões) */}
       {appt.payment_status === 'paid' && (
-        <div className="flex items-center gap-1.5 text-xs text-green-400 bg-green-500/10 rounded-xl px-3 py-2">
+        <div className="flex items-center gap-1.5 text-xs text-green-400 bg-green-500/10 rounded-xl px-3 py-2 border border-green-500/20">
           <CheckCircle2 className="w-3.5 h-3.5" />
-          <span>Pago via {appt.payment_method === 'cash' ? 'Numerário' : appt.payment_method === 'mbway' ? 'MB WAY' : 'Cartão'}</span>
+          <span className="font-semibold">
+            Pago · {appt.payment_method === 'cash' ? 'Numerário' : appt.payment_method === 'mbway' ? 'MB WAY' : 'Cartão'}
+          </span>
         </div>
       )}
     </motion.div>
