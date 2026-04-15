@@ -151,7 +151,7 @@ function WalkinModal({ barber, services, onClose, onCreated }) {
       const now = new Date();
       const timeStr = format(now, 'HH:mm');
       const dateStr = format(now, 'yyyy-MM-dd');
-      const appt = await base44.entities.Appointment.create({
+      await base44.entities.Appointment.create({
         barbershop_id: barber.barbershop_id,
         barbershop_name: barber.barbershop_name || 'Fellas Barbers',
         barber_id: barber.id,
@@ -173,11 +173,9 @@ function WalkinModal({ barber, services, onClose, onCreated }) {
         payment_status: 'pending',
         notes: 'Walk-in — sem marcação prévia',
       });
-      onCreated(appt);
+      onCreated();
       onClose();
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (e) { console.error(e); }
     setLoading(false);
   };
 
@@ -187,98 +185,153 @@ function WalkinModal({ barber, services, onClose, onCreated }) {
     { id: 'card',  label: 'Cartão',     icon: CreditCard },
   ];
 
+  // Agrupar serviços por categoria
+  const grouped = services.filter(s => s.is_active !== false).reduce((acc, svc) => {
+    const cat = svc.category || 'Outros';
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(svc);
+    return acc;
+  }, {});
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}>
-      <motion.div initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-        className="w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[90vh] overflow-y-auto"
-        style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center"
+      style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)' }}>
+      <motion.div
+        initial={{ y: 100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 100, opacity: 0 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+        className="w-full max-w-md rounded-t-3xl overflow-hidden"
+        style={{ background: 'var(--background)', border: '1px solid var(--border)', borderBottom: 'none', maxHeight: '92vh' }}
+      >
+        {/* Handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-border" />
+        </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-black text-foreground text-lg">Walk-in</h3>
-            <p className="text-xs text-muted-foreground">Cliente sem marcação prévia</p>
+        <div className="flex items-center justify-between px-5 pt-1 pb-4 border-b border-border">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
+              style={{ background: 'rgba(200,16,46,0.1)', border: '1px solid rgba(200,16,46,0.25)' }}>
+              <Scissors className="w-5 h-5" style={{ color: RED }} />
+            </div>
+            <div>
+              <h3 className="font-black text-foreground text-base leading-tight">Walk-in</h3>
+              <p className="text-xs text-muted-foreground">Entrada direta · sem marcação</p>
+            </div>
           </div>
-          <button onClick={onClose} className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center">
-            <X className="w-4 h-4 text-muted-foreground" />
+          <button onClick={onClose}
+            className="w-8 h-8 rounded-xl flex items-center justify-center bg-secondary text-muted-foreground hover:text-foreground">
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Nome */}
-        <div className="space-y-1">
-          <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Nome do cliente *</label>
-          <input value={clientName} onChange={e => setClientName(e.target.value)} placeholder="ex: João Silva"
-            className="w-full px-4 py-3 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:border-[#C8102E]/50" />
-        </div>
+        {/* Scroll area */}
+        <div className="overflow-y-auto px-5 py-4 space-y-5" style={{ maxHeight: 'calc(92vh - 160px)' }}>
 
-        {/* Telefone */}
-        <div className="space-y-1">
-          <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Telefone (opcional)</label>
-          <input value={clientPhone} onChange={e => setClientPhone(e.target.value)} placeholder="9XX XXX XXX"
-            className="w-full px-4 py-3 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:border-[#C8102E]/50" />
-        </div>
-
-        {/* Serviços */}
-        <div className="space-y-2">
-          <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Serviços *</label>
-          <div className="grid grid-cols-2 gap-2">
-            {services.filter(s => s.is_active !== false).map(svc => {
-              const sel = selServices.includes(svc.id);
-              return (
-                <button key={svc.id} onClick={() => toggle(svc.id)}
-                  className="p-3 rounded-xl text-left transition-all border"
-                  style={{
-                    background: sel ? 'rgba(200,16,46,0.1)' : 'var(--secondary)',
-                    borderColor: sel ? RED : 'var(--border)',
-                  }}>
-                  <p className="text-xs font-bold text-foreground truncate">{svc.name}</p>
-                  <p className="text-[11px] font-bold mt-0.5" style={{ color: RED }}>€{svc.price}</p>
-                </button>
-              );
-            })}
+          {/* Cliente */}
+          <div className="space-y-3">
+            <p className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">Cliente</p>
+            <div className="rounded-2xl overflow-hidden border border-border bg-card divide-y divide-border">
+              <div className="relative">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input value={clientName} onChange={e => setClientName(e.target.value)}
+                  placeholder="Nome do cliente *"
+                  className="w-full pl-11 pr-4 py-3.5 bg-transparent text-foreground text-sm placeholder:text-muted-foreground focus:outline-none" />
+              </div>
+              <div className="relative">
+                <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input value={clientPhone} onChange={e => setClientPhone(e.target.value)}
+                  placeholder="Telefone (opcional)"
+                  className="w-full pl-11 pr-4 py-3.5 bg-transparent text-foreground text-sm placeholder:text-muted-foreground focus:outline-none" />
+              </div>
+            </div>
           </div>
-        </div>
 
-        {/* Método */}
-        <div className="space-y-2">
-          <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Método de pagamento</label>
-          <div className="grid grid-cols-3 gap-2">
-            {PAY_OPTS.map(({ id, label, icon: Icon }) => (
-              <button key={id} onClick={() => setPayMethod(id)}
-                className="p-3 rounded-xl flex flex-col items-center gap-1.5 transition-all border"
-                style={{
-                  background: payMethod === id ? 'rgba(200,16,46,0.1)' : 'var(--secondary)',
-                  borderColor: payMethod === id ? RED : 'var(--border)',
-                }}>
-                <Icon className="w-4 h-4" style={{ color: payMethod === id ? RED : 'var(--muted-foreground)' }} />
-                <span className="text-[11px] font-bold" style={{ color: payMethod === id ? RED : 'var(--muted-foreground)' }}>{label}</span>
-              </button>
+          {/* Serviços por categoria */}
+          <div className="space-y-3">
+            <p className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">Serviço *</p>
+            {Object.entries(grouped).map(([cat, svcs]) => (
+              <div key={cat} className="space-y-1.5">
+                {Object.keys(grouped).length > 1 && (
+                  <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider px-1">{cat}</p>
+                )}
+                <div className="rounded-2xl overflow-hidden border border-border divide-y divide-border bg-card">
+                  {svcs.map(svc => {
+                    const sel = selServices.includes(svc.id);
+                    return (
+                      <button key={svc.id} onClick={() => toggle(svc.id)}
+                        className="w-full flex items-center justify-between px-4 py-3 text-left transition-colors"
+                        style={{ background: sel ? 'rgba(200,16,46,0.07)' : 'transparent' }}>
+                        <div className="flex items-center gap-3">
+                          <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all"
+                            style={{ borderColor: sel ? RED : 'var(--border)', background: sel ? RED : 'transparent' }}>
+                            {sel && <CheckCircle2 className="w-3 h-3 text-white" />}
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-foreground leading-tight">{svc.name}</p>
+                            {svc.duration_minutes && (
+                              <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                                <Clock className="w-3 h-3" />{svc.duration_minutes} min
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-sm font-black flex-shrink-0 ml-2" style={{ color: RED }}>
+                          €{(svc.price || 0).toFixed(2)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             ))}
           </div>
-        </div>
 
-        {/* Total */}
-        {total > 0 && (
-          <div className="flex items-center justify-between py-3 px-4 rounded-xl"
-            style={{ background: 'rgba(200,16,46,0.08)', border: `1px solid rgba(200,16,46,0.2)` }}>
-            <span className="text-sm font-bold text-foreground">Total</span>
-            <span className="text-xl font-black" style={{ color: RED }}>€{total.toFixed(2)}</span>
+          {/* Método de pagamento */}
+          <div className="space-y-3">
+            <p className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">Método de pagamento</p>
+            <div className="grid grid-cols-3 gap-2">
+              {PAY_OPTS.map(({ id, label, icon: Icon }) => (
+                <button key={id} onClick={() => setPayMethod(id)}
+                  className="py-3 px-2 rounded-2xl flex flex-col items-center gap-1.5 transition-all border"
+                  style={{
+                    background: payMethod === id ? 'rgba(200,16,46,0.1)' : 'var(--card)',
+                    borderColor: payMethod === id ? RED : 'var(--border)',
+                  }}>
+                  <Icon className="w-4 h-4" style={{ color: payMethod === id ? RED : 'var(--muted-foreground)' }} />
+                  <span className="text-[11px] font-bold leading-tight text-center"
+                    style={{ color: payMethod === id ? RED : 'var(--muted-foreground)' }}>{label}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        )}
 
-        {/* Aviso */}
-        <div className="flex items-start gap-2 p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
-          <AlertTriangle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-yellow-300">Este registo conta para os teus stats e metas mensais. Cortes não registados não contam para recompensas.</p>
         </div>
 
-        {/* CTA */}
-        <button onClick={handleCreate} disabled={loading || !clientName.trim() || selServices.length === 0}
-          className="w-full py-4 rounded-2xl font-bold text-white text-sm disabled:opacity-40 transition-opacity"
-          style={{ background: RED, boxShadow: '0 8px 24px rgba(200,16,46,0.3)' }}>
-          {loading ? 'A registar...' : `Registar Walk-in • €${total.toFixed(2)}`}
-        </button>
+        {/* Footer fixo */}
+        <div className="px-5 pb-6 pt-3 border-t border-border space-y-3"
+          style={{ background: 'var(--background)' }}>
+          {selServices.length > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">
+                {selServices.length} serviço{selServices.length !== 1 ? 's' : ''}
+              </span>
+              <span className="text-xl font-black" style={{ color: RED }}>€{total.toFixed(2)}</span>
+            </div>
+          )}
+          <button onClick={handleCreate}
+            disabled={loading || !clientName.trim() || selServices.length === 0}
+            className="w-full py-4 rounded-2xl font-bold text-white text-sm disabled:opacity-40 transition-all"
+            style={{ background: selServices.length > 0 && clientName.trim() ? RED : 'var(--secondary)',
+                     color: selServices.length > 0 && clientName.trim() ? '#fff' : 'var(--muted-foreground)',
+                     boxShadow: selServices.length > 0 && clientName.trim() ? '0 8px 24px rgba(200,16,46,0.3)' : 'none' }}>
+            {loading ? 'A registar...' : selServices.length > 0 && clientName.trim()
+              ? `Registar Walk-in · €${total.toFixed(2)}`
+              : 'Preenche nome e serviço'}
+          </button>
+        </div>
       </motion.div>
     </div>
   );
