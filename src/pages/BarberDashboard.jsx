@@ -96,32 +96,48 @@ function AppointmentCard({ appt, onStatusChange, onPayment }) {
         </span>
       </div>
 
-      {(appt.status === 'scheduled' || appt.status === 'confirmed' || appt.status === 'in_progress') && (
-        <div className="flex gap-2 flex-wrap">
-          {appt.status !== 'in_progress' && (
-            <button onClick={() => onStatusChange(appt.id, 'in_progress')}
-              className="flex-1 py-2 rounded-xl text-xs font-bold border border-yellow-500/30 text-yellow-400 bg-yellow-500/10 hover:bg-yellow-500/20">
-              Iniciar
-            </button>
-          )}
+      {/* Ações por estado */}
+      {(appt.status === 'scheduled' || appt.status === 'confirmed') && (
+        <div className="flex gap-2">
+          <button onClick={() => onStatusChange(appt.id, 'in_progress')}
+            className="flex-1 py-2.5 rounded-xl text-xs font-bold border border-yellow-500/40 text-yellow-400 bg-yellow-500/10 hover:bg-yellow-500/20 transition-colors">
+            ▶ Iniciar
+          </button>
+        </div>
+      )}
+
+      {appt.status === 'in_progress' && appt.payment_status !== 'paid' && (
+        <div className="flex gap-2">
           <button onClick={() => onStatusChange(appt.id, 'completed')}
-            className="flex-1 py-2 rounded-xl text-xs font-bold text-white"
+            className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white transition-colors"
             style={{ background: RED }}>
-            Concluir
+            ✓ Concluir
           </button>
           <button onClick={() => onPayment(appt)}
-            className="py-2 px-3 rounded-xl text-xs font-bold border border-border text-muted-foreground hover:border-[#C8102E]/40 hover:text-[#C8102E]"
+            className="py-2.5 px-4 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5"
+            style={{ borderColor: 'rgba(200,16,46,0.4)', color: RED, background: 'rgba(200,16,46,0.06)' }}
             title="Cobrar">
-            <QrCode className="w-4 h-4" />
+            <QrCode className="w-4 h-4" /> Cobrar
+          </button>
+        </div>
+      )}
+
+      {/* Concluído mas não pago — só mostrar cobrar */}
+      {appt.status === 'completed' && appt.payment_status !== 'paid' && (
+        <div className="flex gap-2">
+          <button onClick={() => onPayment(appt)}
+            className="w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all"
+            style={{ background: 'rgba(200,16,46,0.08)', borderColor: RED, border: `1px solid rgba(200,16,46,0.3)`, color: RED }}>
+            <QrCode className="w-4 h-4" /> Registar pagamento
           </button>
         </div>
       )}
 
       {/* Indicador pagamento */}
       {appt.payment_status === 'paid' && (
-        <div className="flex items-center gap-1.5 text-xs text-green-400">
+        <div className="flex items-center gap-1.5 text-xs text-green-400 bg-green-500/10 rounded-xl px-3 py-2">
           <CheckCircle2 className="w-3.5 h-3.5" />
-          <span>Pago via {appt.payment_method || 'app'}</span>
+          <span>Pago via {appt.payment_method === 'cash' ? 'Numerário' : appt.payment_method === 'mbway' ? 'MB WAY' : 'Cartão'}</span>
         </div>
       )}
     </motion.div>
@@ -393,11 +409,41 @@ function PaymentModal({ appt, onClose, onPaid }) {
               </button>
             </div>
 
-            {/* Valor */}
-            <div className="text-center py-4">
-              <p className="text-xs text-muted-foreground mb-1">Valor a cobrar</p>
-              <p className="text-4xl font-black" style={{ color: RED }}>€{(appt?.total_price||0).toFixed(2)}</p>
-              <p className="text-xs text-muted-foreground mt-1">Código: <span className="font-mono font-bold text-foreground">{payCode}</span></p>
+            {/* Valor + QR/Link visual para MB WAY */}
+            <div className="text-center py-3 space-y-3">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Valor a cobrar</p>
+                <p className="text-4xl font-black" style={{ color: RED }}>€{(appt?.total_price||0).toFixed(2)}</p>
+                <p className="text-xs text-muted-foreground mt-1">Ref: <span className="font-mono font-bold text-foreground">{payCode}</span></p>
+              </div>
+              {method === 'mbway' && (
+                <div className="rounded-2xl p-3 border space-y-2"
+                  style={{ borderColor: 'rgba(200,16,46,0.2)', background: 'rgba(200,16,46,0.04)' }}>
+                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Instrução MB WAY</p>
+                  <p className="text-sm font-bold text-foreground">Solicitar ao cliente:</p>
+                  <div className="rounded-xl p-3 text-center font-mono text-base font-black"
+                    style={{ background: 'var(--secondary)', color: RED }}>
+                    €{(appt?.total_price||0).toFixed(2)} · REF {payCode}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground text-center">
+                    O cliente envia pelo MB WAY para o número da loja
+                  </p>
+                </div>
+              )}
+              {method === 'cash' && (
+                <div className="rounded-2xl p-3 border space-y-1"
+                  style={{ borderColor: 'rgba(34,197,94,0.2)', background: 'rgba(34,197,94,0.04)' }}>
+                  <p className="text-sm font-bold" style={{ color: '#22c55e' }}>Receber €{(appt?.total_price||0).toFixed(2)} em espécie</p>
+                  <p className="text-[11px] text-muted-foreground">Confirma o recebimento físico abaixo</p>
+                </div>
+              )}
+              {method === 'card' && (
+                <div className="rounded-2xl p-3 border space-y-1"
+                  style={{ borderColor: 'rgba(99,102,241,0.2)', background: 'rgba(99,102,241,0.04)' }}>
+                  <p className="text-sm font-bold" style={{ color: '#6366f1' }}>Terminal físico</p>
+                  <p className="text-[11px] text-muted-foreground">Insere €{(appt?.total_price||0).toFixed(2)} no terminal e confirma abaixo</p>
+                </div>
+              )}
             </div>
 
             {/* Métodos */}
