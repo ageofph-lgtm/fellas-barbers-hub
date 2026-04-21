@@ -39,7 +39,6 @@ function GeoScreen({ onResult }) {
   return (
     <div className="min-h-[72vh] flex flex-col items-center justify-center text-center px-4">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-xs w-full">
-        {/* Icon */}
         <div className="w-20 h-20 rounded-3xl mx-auto flex items-center justify-center"
           style={{ background: 'rgba(200,16,46,0.1)', border: `1px solid rgba(200,16,46,0.3)` }}>
           <Navigation className="w-9 h-9" style={{ color: RED }} />
@@ -73,16 +72,13 @@ function GeoScreen({ onResult }) {
 function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName, onFavoriteShop, userLocation }) {
   const name = prefs.clientName || '';
 
-  // ── Static shop data (coords + hours fallback) ───────────────────────────
   const STATIC = {
     'Alameda':      { lat: 38.7318, lon: -9.1353, wd: '10:00-19:00', sat: '10:00-17:00', sun: null },
     'Campo Grande': { lat: 38.7573, lon: -9.1538, wd: '10:00-20:00', sat: '10:00-18:00', sun: null },
     'Almada':       { lat: 38.6769, lon: -9.1717, wd: '10:00-20:00', sat: '10:00-18:00', sun: null },
   };
   function getStatic(shop) {
-    for (const [k, v] of Object.entries(STATIC)) {
-      if (shop.name?.includes(k)) return v;
-    }
+    for (const [k, v] of Object.entries(STATIC)) { if (shop.name?.includes(k)) return v; }
     return null;
   }
   function getCoords(shop) {
@@ -124,7 +120,6 @@ function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName, onFavorit
     });
   }
 
-  // ── Sort: favorita primeiro, depois por distância ────────────────────────
   const sorted = [...shops].sort((a,b) => {
     if (a.id===prefs.favoriteShopId) return -1;
     if (b.id===prefs.favoriteShopId) return 1;
@@ -186,15 +181,12 @@ function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName, onFavorit
                 background: fav ? 'rgba(200,16,46,0.03)' : 'var(--card)',
               }}
             >
-              {/* Fav badge */}
               {fav && (
                 <div className="flex items-center gap-1.5 px-4 pt-2.5">
                   <Heart className="w-3 h-3 fill-current" style={{ color:RED }} />
                   <span className="text-[10px] font-black tracking-wider uppercase" style={{ color:RED }}>Favorita</span>
                 </div>
               )}
-
-              {/* Main row */}
               <div className="flex items-start gap-3 px-4 pt-3 pb-2">
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
                   style={{ background: fav?'rgba(200,16,46,0.12)':'var(--secondary)' }}>
@@ -207,7 +199,6 @@ function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName, onFavorit
                   <p className="font-bold text-foreground text-sm">{shop.name}</p>
                   {shop.address && <p className="text-xs text-muted-foreground truncate">{shop.address}</p>}
                   <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                    {/* Aberto/Fechado */}
                     <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
                       style={{
                         background: open?'rgba(34,197,94,0.1)':'rgba(100,100,100,0.08)',
@@ -217,7 +208,6 @@ function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName, onFavorit
                       <span className="w-1.5 h-1.5 rounded-full" style={{ background: open?'#22c55e':'var(--muted-foreground)' }}/>
                       {open?'Aberto':'Fechado'}
                     </span>
-                    {/* Distância */}
                     {km !== null && (
                       <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-secondary border border-border text-muted-foreground">
                         <Navigation className="w-3 h-3"/>
@@ -226,15 +216,12 @@ function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName, onFavorit
                     )}
                   </div>
                 </div>
-                {/* Fav button */}
                 <button onClick={(e) => { e.stopPropagation(); onFavoriteShop(shop); }}
                   className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors"
                   style={{ background:'var(--secondary)' }}>
                   <Heart className="w-4 h-4" style={{ color:fav?RED:'var(--muted-foreground)', fill:fav?RED:'transparent' }}/>
                 </button>
               </div>
-
-              {/* Horários próximos 3 dias */}
               <div className="grid grid-cols-3 gap-1 px-4 pb-3">
                 {days.map(({ label, hours }) => (
                   <div key={label} className="text-center rounded-xl py-1.5 px-1 bg-secondary/50">
@@ -245,8 +232,6 @@ function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName, onFavorit
                   </div>
                 ))}
               </div>
-
-              {/* ── CTA AGENDAR — largo, clicável, impossível de perder ── */}
               <button
                 onClick={() => onBook({ skipToShop: shop })}
                 className="w-full py-3.5 font-black text-sm text-white transition-all"
@@ -261,32 +246,29 @@ function ClientProfile({ prefs, shops, allBarbers, onBook, onEditName, onFavorit
           );
         })}
       </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-2 pt-1">
-        {[[String(shops.length||'—'),'Unidades'],['1000+','Reviews'],['4.9★','Rating']].map(([v,l]) => (
-          <div key={l} className="p-3 rounded-xl bg-card border border-border text-center">
-            <p className="text-base font-black" style={{ color:RED }}>{v}</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">{l}</p>
-          </div>
-        ))}
-      </div>
-      <ThemeToggleFloat />
     </div>
   );
 }
 
-function NameEditor({ initialName, onSave }) {
+// ── NameEditor ────────────────────────────────────────────────────────────────
+function NameEditor({ initialName, onSave, onCancel }) {
   const [val, setVal] = useState(initialName || '');
   return (
     <div className="space-y-5 pt-4">
-      <h3 className="text-lg font-black text-foreground">O teu nome</h3>
+      <div className="flex items-center gap-3 mb-2">
+        <button onClick={onCancel}
+          className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="w-4 h-4" />
+        </button>
+        <h3 className="text-lg font-black text-foreground">O teu nome</h3>
+      </div>
       <input type="text" value={val} onChange={e => setVal(e.target.value)}
         placeholder="Ex: João Silva" autoFocus
         className="w-full bg-card border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none text-sm"
         style={{ outline: 'none' }}
         onFocus={e => e.target.style.borderColor = RED}
         onBlur={e => e.target.style.borderColor = ''}
+        onKeyDown={e => { if (e.key === 'Enter' && val.trim()) onSave(val.trim()); }}
       />
       <button onClick={() => onSave(val.trim())} disabled={!val.trim()}
         className="w-full py-3.5 rounded-2xl font-bold text-sm transition-colors disabled:opacity-40"
@@ -305,6 +287,17 @@ function BarberSelectorWithFav({ barbers, selected, favoriteBarberRelId, onSelec
     return 0;
   });
 
+  if (barbers.length === 0) {
+    return (
+      <div className="text-center py-16 space-y-3">
+        <div className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center bg-secondary">
+          <Scissors className="w-7 h-7 text-muted-foreground" />
+        </div>
+        <p className="text-muted-foreground text-sm">Nenhum barbeiro disponível nesta loja.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="text-center mb-2">
@@ -314,13 +307,22 @@ function BarberSelectorWithFav({ barbers, selected, favoriteBarberRelId, onSelec
       <div className="space-y-3">
         {sorted.map((barber, i) => {
           const isFav = barber.id === favoriteBarberRelId;
+          const isSelected = selected?.id === barber.id;
           return (
             <motion.div key={barber.id}
               initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
               className="rounded-2xl border overflow-hidden transition-all"
-              style={{ borderColor: isFav ? `${RED}80` : '', background: isFav ? 'rgba(200,16,46,0.04)' : '' }}>
+              style={{
+                borderColor: isSelected ? RED : isFav ? `${RED}80` : '',
+                background: isSelected ? 'rgba(200,16,46,0.06)' : isFav ? 'rgba(200,16,46,0.02)' : '',
+              }}>
               <div className="flex items-center gap-3 p-4">
-                <button className="flex-1 flex items-center gap-3 text-left" onClick={() => onSelect(barber)}>
+                {/* Área clicável para selecionar */}
+                <button
+                  type="button"
+                  className="flex-1 flex items-center gap-3 text-left"
+                  onClick={() => onSelect(barber)}
+                >
                   <div className="relative flex-shrink-0">
                     {barber.photo_url
                       ? <img src={barber.photo_url} alt={barber.name} className="w-14 h-14 rounded-xl object-cover border border-border" />
@@ -342,16 +344,22 @@ function BarberSelectorWithFav({ barbers, selected, favoriteBarberRelId, onSelec
                       </p>
                     )}
                     <div className="flex flex-wrap gap-1 mt-1.5">
-                      {(barber.specialties || []).slice(0, 2).map(s => (
+                      {(barber.specialties || []).slice(0, 3).map(s => (
                         <span key={s} className="text-[10px] px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground">{s}</span>
                       ))}
                     </div>
                   </div>
+                  {/* Seta indicadora */}
+                  <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                 </button>
-                <button onClick={() => onFavorite(barber)}
-                  className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors hover:bg-secondary">
-                  <Heart className={`w-5 h-5 transition-colors`}
-                    style={{ color: isFav ? RED : '', fill: isFav ? RED : 'transparent' }} />
+                {/* Botão favorito separado */}
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onFavorite(barber); }}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors hover:bg-secondary ml-1"
+                >
+                  <Heart className="w-5 h-5 transition-colors"
+                    style={{ color: isFav ? RED : 'var(--muted-foreground)', fill: isFav ? RED : 'transparent' }} />
                 </button>
               </div>
             </motion.div>
@@ -384,7 +392,7 @@ export default function Booking() {
   const { data: shops = [] } = useQuery({ queryKey: ['barbershops'], queryFn: () => base44.entities.Barbershop.filter({ is_active: true }) });
   const { data: allBarbers = [] } = useQuery({ queryKey: ['all-barbers'], queryFn: () => base44.entities.Barber.filter({ is_active: true }) });
   const { data: services = [] } = useQuery({ queryKey: ['services'], queryFn: () => base44.entities.Service.filter({ is_active: true }) });
-  const { data: barbers = [] } = useQuery({
+  const { data: barbers = [], isLoading: loadingBarbers } = useQuery({
     queryKey: ['barbers', selectedShop?.id],
     queryFn: () => base44.entities.Barber.filter({ barbershop_id: selectedShop.id, is_active: true }),
     enabled: !!selectedShop,
@@ -401,42 +409,80 @@ export default function Booking() {
 
   const updatePrefs = useCallback((u) => setPrefs(prev => { const n = { ...prev, ...u }; savePrefs(n); return n; }), []);
 
+  // FIX: startBooking com lógica corrigida
   const startBooking = ({ skipToShop, skipToBarber } = {}) => {
     setEditingName(false);
-    if (skipToShop) { setSelectedShop(skipToShop); setStep(2); }
-    else if (skipToBarber) {
+    // Limpar seleções anteriores ao iniciar novo agendamento
+    setSelectedServices([]);
+    setSelectedSlot(null);
+
+    if (skipToShop) {
+      setSelectedShop(skipToShop);
+      setSelectedBarber(null);
+      setStep(2); // → services
+    } else if (skipToBarber) {
       const full = allBarbers.find(b => b.id === skipToBarber.id);
-      if (full) { const shop = shops.find(s => s.id === full.barbershop_id); if (shop) setSelectedShop(shop); setSelectedBarber(full); setStep(5); }
-      else setStep(2);
-    } else setStep(2);
+      if (full) {
+        const shop = shops.find(s => s.id === full.barbershop_id);
+        if (shop) {
+          setSelectedShop(shop);
+          setSelectedBarber(full);
+          setStep(2); // → services (depois vai para barber → time → confirm)
+        } else {
+          setStep(2);
+        }
+      } else {
+        setStep(2);
+      }
+    } else {
+      setStep(2);
+    }
   };
 
   const handleConfirm = async () => {
     setIsSubmitting(true);
-    const dateStr = format(selectedSlot.date, 'yyyy-MM-dd');
-    const endMin  = selectedSlot.time.split(':').map(Number).reduce((h, m) => h * 60 + m) + totalDuration;
-    const endTime = `${String(Math.floor(endMin / 60)).padStart(2, '0')}:${String(endMin % 60).padStart(2, '0')}`;
-    const appt = await base44.entities.Appointment.create({
-      barbershop_id: selectedShop.id, barber_id: selectedBarber.id,
-      barbershop_name: selectedShop.name, barber_name: selectedBarber.name,
-      client_name: clientInfo.name, client_phone: clientInfo.phone, client_email: clientInfo.email,
-      services: selectedServices.map(s => ({ service_id: s.id, name: s.name, price: s.price, duration_minutes: s.duration_minutes })),
-      service_names: selectedServices.map(s => s.name),
-      total_price: total, total_duration: totalDuration,
-      date: dateStr, start_time: selectedSlot.time, end_time: endTime,
-      status: 'scheduled', notes,
-      payment_method: 'pending',
-      payment_status: 'pending',
-      is_walkin: false,
-    });
-    updatePrefs({ clientName: clientInfo.name, clientPhone: clientInfo.phone, clientEmail: clientInfo.email });
-    setCreatedAppointment(appt);
-    setIsSubmitting(false);
-    setStep(6);
+    try {
+      const dateStr = format(selectedSlot.date, 'yyyy-MM-dd');
+      const endMin  = selectedSlot.time.split(':').map(Number).reduce((h, m) => h * 60 + m) + totalDuration;
+      const endTime = `${String(Math.floor(endMin / 60)).padStart(2, '0')}:${String(endMin % 60).padStart(2, '0')}`;
+      const appt = await base44.entities.Appointment.create({
+        barbershop_id: selectedShop.id, barber_id: selectedBarber.id,
+        barbershop_name: selectedShop.name, barber_name: selectedBarber.name,
+        client_name: clientInfo.name, client_phone: clientInfo.phone, client_email: clientInfo.email,
+        services: selectedServices.map(s => ({ service_id: s.id, name: s.name, price: s.price, duration_minutes: s.duration_minutes })),
+        service_names: selectedServices.map(s => s.name),
+        total_price: total, total_duration: totalDuration,
+        date: dateStr, start_time: selectedSlot.time, end_time: endTime,
+        status: 'scheduled', notes,
+        payment_method: 'pending',
+        payment_status: 'pending',
+        is_walkin: false,
+      });
+      updatePrefs({ clientName: clientInfo.name, clientPhone: clientInfo.phone, clientEmail: clientInfo.email });
+      setCreatedAppointment(appt);
+      setStep(6);
+    } catch (err) {
+      console.error('Erro ao criar agendamento:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const resetBooking = () => { setStep(1); setSelectedShop(null); setSelectedServices([]); setSelectedBarber(null); setSelectedSlot(null); setNotes(''); setCreatedAppointment(null); };
-  const goBack = () => { if (step >= 2 && step < 6) setStep(step - 1); };
+  const resetBooking = () => {
+    setStep(1);
+    setSelectedShop(null);
+    setSelectedServices([]);
+    setSelectedBarber(null);
+    setSelectedSlot(null);
+    setNotes('');
+    setCreatedAppointment(null);
+  };
+
+  // FIX: goBack também fecha o editor de nome
+  const goBack = () => {
+    if (editingName) { setEditingName(false); return; }
+    if (step >= 2 && step < 6) setStep(step - 1);
+  };
 
   const currentStep = STEPS[step];
   const progressStep = step - 2;
@@ -459,7 +505,6 @@ export default function Booking() {
             </button>
           )}
           <div className="flex items-center gap-2 flex-1">
-            {/* Inline crown icon */}
             <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
               style={{ background: 'rgba(200,16,46,0.12)', border: '1px solid rgba(200,16,46,0.25)' }}>
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
@@ -479,14 +524,12 @@ export default function Booking() {
           </div>
         </div>
 
-        {/* Progress */}
         {step >= 2 && step < 6 && (
           <div className="max-w-lg mx-auto px-4 pb-3 pt-1">
             <div className="flex gap-1.5">
               {[0,1,2,3,4].map(i => (
                 <div key={i} className="h-1 flex-1 rounded-full transition-all duration-500"
-                  style={{ background: i < progressStep ? RED : i === progressStep ? `${RED}70` : '' }}
-                  data-inactive={i > progressStep}
+                  style={{ background: i < progressStep ? RED : i === progressStep ? `${RED}70` : 'var(--border)' }}
                 />
               ))}
             </div>
@@ -502,44 +545,62 @@ export default function Booking() {
             initial={{ opacity: 0, x: 14 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -14 }}
             transition={{ duration: 0.15 }}
           >
-            {currentStep === 'geo'     && <GeoScreen onResult={loc => { setUserLocation(loc); setStep(1); }} />}
+            {currentStep === 'geo' && (
+              <GeoScreen onResult={loc => { setUserLocation(loc); setStep(1); }} />
+            )}
             {currentStep === 'profile' && !editingName && (
-              <ClientProfile prefs={prefs} shops={shops} allBarbers={allBarbers} userLocation={userLocation} onBook={startBooking} onEditName={() => setEditingName(true)} onFavoriteShop={shop => updatePrefs({ favoriteShopId: shop.id })} />
+              <ClientProfile
+                prefs={prefs} shops={shops} allBarbers={allBarbers} userLocation={userLocation}
+                onBook={startBooking}
+                onEditName={() => setEditingName(true)}
+                onFavoriteShop={shop => updatePrefs({ favoriteShopId: shop.id })}
+              />
             )}
             {currentStep === 'profile' && editingName && (
-              <NameEditor initialName={prefs.clientName}
-                onSave={name => { updatePrefs({ clientName: name }); setClientInfo(p => ({ ...p, name })); setEditingName(false); }} />
+              <NameEditor
+                initialName={prefs.clientName}
+                onSave={name => { updatePrefs({ clientName: name }); setClientInfo(p => ({ ...p, name })); setEditingName(false); }}
+                onCancel={() => setEditingName(false)}
+              />
             )}
             {currentStep === 'services' && (
-              <ServiceSelector services={services} selected={selectedServices} onToggle={toggleService}
-                total={total} totalDuration={totalDuration} onNext={() => setStep(3)} />
+              <ServiceSelector
+                services={services} selected={selectedServices} onToggle={toggleService}
+                total={total} totalDuration={totalDuration} onNext={() => setStep(3)}
+              />
             )}
             {currentStep === 'barber' && (
-              <BarberSelectorWithFav barbers={barbers} selected={selectedBarber}
+              <BarberSelectorWithFav
+                barbers={barbers} selected={selectedBarber}
                 favoriteBarberRelId={prefs.favoriteBarberRelId}
                 onSelect={b => { setSelectedBarber(b); setStep(4); }}
-                onFavorite={b => updatePrefs({ favoriteBarberRelId: b.id })} />
+                onFavorite={b => updatePrefs({ favoriteBarberRelId: b.id })}
+              />
             )}
             {currentStep === 'time' && (
-              <TimeSlotPicker shop={selectedShop} appointments={appointments} totalDuration={totalDuration}
+              <TimeSlotPicker
+                shop={selectedShop} appointments={appointments} totalDuration={totalDuration}
                 selectedSlot={selectedSlot}
-                onSelect={slot => { setSelectedSlot(slot); setStep(5); }} />
+                onSelect={slot => { setSelectedSlot(slot); setStep(5); }}
+              />
             )}
             {currentStep === 'confirm' && (
-              <BookingConfirmation shop={selectedShop} barber={selectedBarber} services={selectedServices}
+              <BookingConfirmation
+                shop={selectedShop} barber={selectedBarber} services={selectedServices}
                 slot={selectedSlot} clientInfo={clientInfo} onClientChange={setClientInfo}
-                notes={notes} onNotesChange={setNotes} onConfirm={handleConfirm} isSubmitting={isSubmitting} />
+                notes={notes} onNotesChange={setNotes} onConfirm={handleConfirm} isSubmitting={isSubmitting}
+              />
             )}
             {currentStep === 'success' && (
-              <BookingSuccess appointment={createdAppointment} onNewBooking={resetBooking}
-                onViewLoyalty={() => navigate('/loyalty')} />
+              <BookingSuccess
+                appointment={createdAppointment} onNewBooking={resetBooking}
+                onViewLoyalty={() => navigate('/loyalty')}
+              />
             )}
           </motion.div>
         </AnimatePresence>
-
-
       </div>
+      <ThemeToggleFloat />
     </div>
   );
 }
-
