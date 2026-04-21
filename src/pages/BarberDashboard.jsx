@@ -15,11 +15,7 @@ import {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const RED = '#C8102E';
-const TEST_BARBER_MAP = {
-  'b1': '69de1b53358fe5119e3489e7',
-  'b2': '69de1b53358fe5119e3489e9',
-  'b3': '69de1b53358fe5119e3489eb',
-};
+// IDs resolvidos dinamicamente via sessão — sem mapa hardcoded
 const STATUS_CONFIG = {
   scheduled:   { label: 'Agendado',   color: 'text-blue-400 bg-blue-500/15'    },
   confirmed:   { label: 'Confirmado', color: 'text-green-400 bg-green-500/15'  },
@@ -356,7 +352,7 @@ export default function BarberDashboard() {
     try { return JSON.parse(sessionStorage.getItem('fellas_role') || '{}'); } catch { return {}; }
   })();
   const barberId = paramBarberId || sessionRole.barberId;
-  const realBarberId = TEST_BARBER_MAP[barberId] || barberId;
+  const realBarberId = (barberId && barberId.length > 4) ? barberId : (JSON.parse(sessionStorage.getItem('fellas_session') || 'null')?.barberId || barberId);
 
   const today = format(new Date(), 'yyyy-MM-dd');
   const monthStart = format(startOfMonth(new Date()), 'yyyy-MM-dd');
