@@ -59,8 +59,9 @@ function GeoScreen({ onResult }) {
             {loading ? 'A detectar...' : 'Usar a minha localização'}
           </button>
           <button onClick={() => onResult(null)}
-            className="w-full py-3 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            Continuar sem localização
+            className="w-full py-3 text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-1.5">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+            Continuar sem localização — ver todas as lojas
           </button>
         </div>
       </motion.div>
@@ -417,11 +418,16 @@ export default function Booking() {
     const endTime = `${String(Math.floor(endMin / 60)).padStart(2, '0')}:${String(endMin % 60).padStart(2, '0')}`;
     const appt = await base44.entities.Appointment.create({
       barbershop_id: selectedShop.id, barber_id: selectedBarber.id,
+      barbershop_name: selectedShop.name, barber_name: selectedBarber.name,
       client_name: clientInfo.name, client_phone: clientInfo.phone, client_email: clientInfo.email,
       services: selectedServices.map(s => ({ service_id: s.id, name: s.name, price: s.price, duration_minutes: s.duration_minutes })),
+      service_names: selectedServices.map(s => s.name),
       total_price: total, total_duration: totalDuration,
       date: dateStr, start_time: selectedSlot.time, end_time: endTime,
       status: 'scheduled', notes,
+      payment_method: 'pending',
+      payment_status: 'pending',
+      is_walkin: false,
     });
     updatePrefs({ clientName: clientInfo.name, clientPhone: clientInfo.phone, clientEmail: clientInfo.email });
     setCreatedAppointment(appt);
@@ -536,3 +542,4 @@ export default function Booking() {
     </div>
   );
 }
+
